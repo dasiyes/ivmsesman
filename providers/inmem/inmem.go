@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"ivmanto.dev/ivmsesman"
+	"github.com/dasiyes/ivmsesman"
 )
 
 var pder = &SessionStoreProvider{list: list.New()}

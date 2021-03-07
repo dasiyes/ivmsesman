@@ -8,7 +8,7 @@ import (
 	"text/template"
 
 	"github.com/dasiyes/ivmsesman"
-	// _ "github.com/dasiyes/ivmsesman/providers/inmem"
+	_ "github.com/dasiyes/ivmsesman/providers/inmem"
 )
 
 var globalSesMan *ivmsesman.Sesman
