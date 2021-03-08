@@ -55,11 +55,24 @@ func (ssp ssProvider) String() string {
 	}
 }
 
+// Initiate sessions store providers map
+// var providers = initiateProviders()
+var providers = make(map[string]SessionRepository)
+
+// initiateProviders init the object holding the accepted sessin store providers
+func initiateProviders() map[string]SessionRepository {
+	return map[string]SessionRepository{
+		Memory.String(): nil, Firestore.String(): nil, Redis.String(): nil}
+}
+
 // NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 	provider, ok := providers[ssProvider.String()]
 	if !ok {
-		return nil, fmt.Errorf("Sesman: unknown session storage %q ", ssProvider.String())
+		return nil, fmt.Errorf("Sesman: unknown session store type %q ", ssProvider.String())
+	}
+	if cfg == nil || cfg.CookieName == "" {
+		return nil, fmt.Errorf("Sesman: Missing or invalid Session Manager Configuration")
 	}
 	return &Sesman{sessions: provider, cfg: cfg}, nil
 }
@@ -115,18 +128,17 @@ type IvmSS interface {
 	// SessionRelease(w http.ResponseWriter)
 }
 
-var providers = make(map[string]SessionRepository)
-
 // RegisterProvider registers a new provider of session stroage for the session management.
 func RegisterProvider(name ssProvider, provider SessionRepository) {
-
-	if provider == nil {
-		panic("SesMan: Register function needs not null provider")
-	}
 
 	if _, dup := providers[name.String()]; dup {
 		panic("SesMan: Provider " + name.String() + " is already registered")
 	}
+
+	if provider == nil {
+		panic("SesMan: Register function needs not-null provider")
+	}
+
 	providers[name.String()] = provider
 }
 
