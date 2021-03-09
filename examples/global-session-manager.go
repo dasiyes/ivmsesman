@@ -21,7 +21,7 @@ func main() {
 		Maxlifetime: 3600,
 	}
 
-	// Create a ne Session Manager
+	// Create a new Session Manager
 	globalSesMan, err = ivmsesman.NewSesman(ivmsesman.Memory, cfg)
 	if err != nil {
 		fmt.Printf("Unable to initiate valid session manager %q", err)

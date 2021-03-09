@@ -124,6 +124,9 @@ type IvmSS interface {
 	// SessionID returns the current session id
 	SessionID() string
 
+	// GetLTA will return the LastTimeAccessedAt
+	GetLTA() time.Time
+
 	// TODO: Find a use-case to implement this method
 	// SessionRelease will release the resource, save the data to presistance storage and return the data to the request
 	// SessionRelease(w http.ResponseWriter)
@@ -188,6 +191,17 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 	return
 }
 
+// ActiveSessions will return the number of the active sessions in the session store
+func (sm *Sesman) ActiveSessions() int {
+	return sm.sessions.ActiveSessions()
+}
+
+// GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.
+// TODO: Consider if there will be use-case for this to be implemented...
+// func (sm *Sesman) GetLastAccessedAt() int64 {
+// 	return 0
+// }
+
 // Destroy sessionid
 func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 
@@ -212,7 +226,6 @@ func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, cookie)
-
 }
 
 // GC is a global clean for expired sessions. It needs to be started in the calling func

@@ -1,1 +1,4 @@
+v0.1.2  INMEM sesstion store provider implemented.
+        Tests implemented with exception of the tests for cleaning the expired sessions.
+        
 v0.0.1  Initial compose of the module

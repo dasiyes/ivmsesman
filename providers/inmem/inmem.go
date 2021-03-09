@@ -45,6 +45,11 @@ func (st *SessionStore) SessionID() string {
 	return st.sid
 }
 
+// GetLTA will return the LastTimeAccessedAt
+func (st *SessionStore) GetLTA() time.Time {
+	return st.timeAccessed
+}
+
 // SessionStoreProvider ensures storing sessions data
 type SessionStoreProvider struct {
 	lock     sync.Mutex
@@ -69,7 +74,9 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error
 func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, error) {
 
 	if element, ok := pder.sessions[sid]; ok {
-		return element.Value.(*SessionStore), nil
+		sesel := element.Value.(*SessionStore)
+		sesel.timeAccessed = time.Now()
+		return sesel, nil
 	}
 
 	sess, err := pder.NewSession(sid)
@@ -130,7 +137,7 @@ func (pder *SessionStoreProvider) ActiveSessions() int {
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
 
-	return pder.list.Len()
+	return len(pder.sessions)
 
 }
 

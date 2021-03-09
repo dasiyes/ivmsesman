@@ -1,11 +1,12 @@
 // Package test will hold the integration test cases
-package main
+package test
 
 import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	i "github.com/dasiyes/ivmsesman"
 	_ "github.com/dasiyes/ivmsesman/providers/inmem"
@@ -108,6 +109,12 @@ func TestExists(t *testing.T) {
 			if ok, err := gsm.Exists(rr, req); !ok || err != nil {
 				t.Errorf("Unexpected error %#v or OK value is %#v\n", err.Error(), ok)
 			}
+
+			var as int = gsm.ActiveSessions()
+			fmt.Printf("active sessions: %d\n", as)
+			if as != 1 {
+				t.Errorf("Unexpected active sessions. Wanted 1, but got %d\n", as)
+			}
 		})
 
 	t.Run("Expect a session to NOT exists",
@@ -122,6 +129,13 @@ func TestExists(t *testing.T) {
 				t.Errorf("Unexpected error %#v or positive OK value %#v\n", err.Error(), ok)
 			}
 		})
+}
+
+// Test UpdateTimeAccessed will test the session's property UdateTimeAccess
+func TestUpdateTimeAccessed(t *testing.T) {
+	// Both session store's methods NewSession and FindOrCreate as well as session's GET method will update the property.
+	ltaa := ss.GetLTA()
+	fmt.Printf("Last time accessed at: %d, vs Now: %d\n", ltaa.UnixNano(), time.Now().UnixNano())
 }
 
 // Test Destroy a session
@@ -139,4 +153,13 @@ func TestDestroy(t *testing.T) {
 			gsm.Destroy(rr, req)
 
 		})
+}
+
+// Test ActiveSessions - expect to be 0 (after destroy)
+func TestActiveSessions(t *testing.T) {
+	var as int = gsm.ActiveSessions()
+	fmt.Printf("active sessions: %d", as)
+	if as != 0 {
+		t.Errorf("Unexpected active sessions. Wanted 0, but got %d\n", as)
+	}
 }
