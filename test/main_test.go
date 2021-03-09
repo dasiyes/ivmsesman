@@ -1,4 +1,5 @@
-package test
+// Package test will hold the integration test cases
+package main
 
 import (
 	"fmt"
@@ -19,13 +20,13 @@ var cfg *i.SesCfg = &i.SesCfg{
 // ######### Testing Session Manager #########
 
 var gsm *i.Sesman
+var ss i.IvmSS
+var sid string
 
 // Testing create a New Session
 func TestNewSession(t *testing.T) {
 
 	var err error
-	var sid string
-	var ss i.IvmSS
 
 	// Testing SESSION [Session Repository]
 
@@ -39,8 +40,6 @@ func TestNewSession(t *testing.T) {
 
 			// simulate a http request
 			req, _ := http.NewRequest("GET", "/", nil)
-			// rc := http.Cookie{Name: "ivmid", Value: sid}
-			// req.AddCookie(&rc)
 
 			rr := httptest.NewRecorder()
 
@@ -51,11 +50,12 @@ func TestNewSession(t *testing.T) {
 			fmt.Printf("session ID: %#v\n", ss.SessionID())
 
 			hc := rr.Header().Get("Set-Cookie")
-			// TODO: expand the testing parameters here
-			fmt.Printf("Cookies: %#v\n", hc)
+			if hc == "" {
+				t.Errorf("Unable to set cookie to the response")
+			}
 		})
 
-	t.Run("Allocate session from cookie sid",
+	t.Run("Allocate session from the request's cookie sid",
 		func(t *testing.T) {
 
 			// simulate a http request
@@ -71,21 +71,72 @@ func TestNewSession(t *testing.T) {
 			}
 
 			rr.Header().Set("Cookie", "ivmid="+sid)
-
-			hc := rr.Result().Header.Get("Cookie")
-			fmt.Printf("Cookies: %#v\n", hc)
-
-			// TODO: expand the testing parameters here
-
 		})
 
-	t.Run("Create new Session object",
+	t.Run("...xxx...",
 		func(t *testing.T) {
 
 		})
+}
 
-	t.Run("Empty configuration object",
+// Test Exists
+func TestExists(t *testing.T) {
+	t.Run("Test Exists with missing sid",
 		func(t *testing.T) {
+			// simulate a http request
+			req, _ := http.NewRequest("GET", "/", nil)
+			rc := http.Cookie{Name: "ivmid", Value: ""}
+			req.AddCookie(&rc)
+
+			rr := httptest.NewRecorder()
+			if ok, err := gsm.Exists(rr, req); !ok && err != nil {
+				if err != i.ErrUnknownSessionID {
+					t.Errorf("Unexpected error: %#v\n", err.Error())
+				}
+			}
+
+		})
+
+	t.Run("Expect a session to exists",
+		func(t *testing.T) {
+			// simulate a http request
+			req, _ := http.NewRequest("GET", "/", nil)
+			rc := http.Cookie{Name: "ivmid", Value: sid}
+			req.AddCookie(&rc)
+
+			rr := httptest.NewRecorder()
+			if ok, err := gsm.Exists(rr, req); !ok || err != nil {
+				t.Errorf("Unexpected error %#v or OK value is %#v\n", err.Error(), ok)
+			}
+		})
+
+	t.Run("Expect a session to NOT exists",
+		func(t *testing.T) {
+			// simulate a http request
+			req, _ := http.NewRequest("GET", "/", nil)
+			rc := http.Cookie{Name: "ivmid", Value: "...xxx..."}
+			req.AddCookie(&rc)
+
+			rr := httptest.NewRecorder()
+			if ok, err := gsm.Exists(rr, req); ok || err != nil {
+				t.Errorf("Unexpected error %#v or positive OK value %#v\n", err.Error(), ok)
+			}
+		})
+}
+
+// Test Destroy a session
+func TestDestroy(t *testing.T) {
+
+	t.Run("Destroy a session",
+		func(t *testing.T) {
+
+			// simulate a http request
+			req, _ := http.NewRequest("GET", "/", nil)
+			rc := http.Cookie{Name: "ivmid", Value: sid}
+			req.AddCookie(&rc)
+
+			rr := httptest.NewRecorder()
+			gsm.Destroy(rr, req)
 
 		})
 }

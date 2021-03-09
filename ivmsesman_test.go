@@ -1,6 +1,8 @@
 package ivmsesman
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -14,6 +16,8 @@ var cfg *SesCfg = &SesCfg{
 var gsm *Sesman
 
 var prvds map[string]SessionRepository
+var err error
+var sid string
 
 // Testing the initiation of the Session Store Providers
 func TestInitiateProviders(t *testing.T) {
@@ -121,9 +125,6 @@ func TestNewSessman(t *testing.T) {
 
 func TestSessionID(t *testing.T) {
 
-	var err error
-	var sid string
-
 	gsm, err = NewSesman(Memory, cfg)
 	if err != nil {
 		t.Errorf("Unexpected error %#v", err.Error())
@@ -138,6 +139,24 @@ func TestSessionID(t *testing.T) {
 			// fmt.Printf("generated sid: %#v\n", sid)
 			if len(sid) < 27 {
 				t.Errorf("Session ID length is below expected 27 chars")
+			}
+		})
+}
+
+// Test Exists
+func TestExists(t *testing.T) {
+	t.Run("Test Exists with missing sid",
+		func(t *testing.T) {
+			// simulate a http request
+			req, _ := http.NewRequest("GET", "/", nil)
+			rc := http.Cookie{Name: "ivmid", Value: ""}
+			req.AddCookie(&rc)
+
+			rr := httptest.NewRecorder()
+			if ok, err := gsm.Exists(rr, req); !ok && err != nil {
+				if err != ErrUnknownSessionID {
+					t.Errorf("Unexpected error: %#v\n", err.Error())
+				}
 			}
 		})
 }

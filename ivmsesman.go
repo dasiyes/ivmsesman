@@ -2,6 +2,7 @@
 package ivmsesman
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -193,7 +194,6 @@ func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 	if err != nil || cookie.Value == "" {
 		return
-
 	}
 
 	sm.lock.Lock()
@@ -231,3 +231,20 @@ func (sm *Sesman) GC() {
 	sm.sessions.SessionGC(sm.cfg.Maxlifetime)
 	time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
 }
+
+// Exists will check the session repository for a session by its id and return the result as bool
+func (sm *Sesman) Exists(w http.ResponseWriter, r *http.Request) (bool, error) {
+
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		return false, ErrUnknownSessionID
+	}
+
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	return sm.sessions.Exists(cookie.Value), nil
+}
+
+// ErrUnknownSessionID  will be returned when a session id is required for a operation but it is missing or wrong value
+var ErrUnknownSessionID = errors.New("Unknown session id")
