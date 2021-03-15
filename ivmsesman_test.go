@@ -15,26 +15,9 @@ var cfg *SesCfg = &SesCfg{
 
 var gsm *Sesman
 
-var prvds map[string]SessionRepository
+// var prvds map[string]SessionRepository
 var err error
 var sid string
-
-// Testing the initiation of the Session Store Providers
-func TestInitiateProviders(t *testing.T) {
-	mp := initiateProviders()
-	if _, ok := mp["Memory"]; !ok {
-		t.Errorf("Memory is expected to be an accepted SS provider")
-	}
-	if _, ok := mp["FireStore"]; !ok {
-		t.Errorf("FireStore is expected to be an accepted SS provider")
-	}
-	if _, ok := mp["Redis"]; !ok {
-		t.Errorf("Redis is expected to be an accepted SS provider")
-	}
-	if _, ok := mp["SomethingElse"]; ok {
-		t.Errorf("SomethingElse is NOT expected to be an accepted SS provider")
-	}
-}
 
 // Testing Register provider
 func TestRegisterProvider(t *testing.T) {

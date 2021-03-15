@@ -1,3 +1,4 @@
+// Package inmem should be dummy imported with _ "girhub.com/dasiyes/ivmsesman/inmem" in order to auto run init() method which will register the provider in the ivmsesman package by invoking method RegisterProvider
 package inmem
 
 import (
