@@ -242,8 +242,10 @@ func (sm *Sesman) GC() {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	sm.sessions.SessionGC(sm.cfg.Maxlifetime)
-	time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
+	if sm.sessions.ActiveSessions() > 0 {
+		sm.sessions.SessionGC(sm.cfg.Maxlifetime)
+		time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
+	}
 }
 
 // Exists will check the session repository for a session by its id and return the result as bool
@@ -261,4 +263,4 @@ func (sm *Sesman) Exists(w http.ResponseWriter, r *http.Request) (bool, error) {
 }
 
 // ErrUnknownSessionID  will be returned when a session id is required for a operation but it is missing or wrong value
-var ErrUnknownSessionID = errors.New("Unknown session id")
+var ErrUnknownSessionID = errors.New("unknown session id")
