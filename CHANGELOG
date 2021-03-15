@@ -1,3 +1,5 @@
+v0.1.3  hotfix: Initiate the supported providers map
+
 v0.1.2  INMEM sesstion store provider implemented.
         Tests implemented with exception of the tests for cleaning the expired sessions.
         
