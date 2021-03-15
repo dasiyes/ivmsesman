@@ -57,8 +57,9 @@ func (ssp ssProvider) String() string {
 }
 
 // Initiate sessions store providers map
-// var providers = initiateProviders()
-var providers = make(map[string]SessionRepository)
+var providers = initiateProviders()
+
+// var providers = make(map[string]SessionRepository)
 
 // initiateProviders init the object holding the accepted sessin store providers
 func initiateProviders() map[string]SessionRepository {
