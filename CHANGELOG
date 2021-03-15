@@ -1,4 +1,4 @@
-v0.1.5  hotfix: Fixing Provider registering
+v0.1.6  hotfix: Fixing Provider registering
 
 v0.1.4  hotfix: Fix for GC panics without sessions
 

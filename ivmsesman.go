@@ -56,16 +56,7 @@ func (ssp ssProvider) String() string {
 	}
 }
 
-// Initiate sessions store providers map
-var providers = initiateProviders()
-
-// var providers = make(map[string]SessionRepository)
-
-// initiateProviders init the object holding the accepted sessin store providers
-func initiateProviders() map[string]SessionRepository {
-	return map[string]SessionRepository{
-		Memory.String(): nil, Firestore.String(): nil, Redis.String(): nil}
-}
+var providers = make(map[string]SessionRepository)
 
 // NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
@@ -242,10 +233,8 @@ func (sm *Sesman) GC() {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	if sm.sessions.ActiveSessions() > 0 {
-		sm.sessions.SessionGC(sm.cfg.Maxlifetime)
-		time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
-	}
+	sm.sessions.SessionGC(sm.cfg.Maxlifetime)
+	time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
 }
 
 // Exists will check the session repository for a session by its id and return the result as bool
