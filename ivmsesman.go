@@ -25,8 +25,9 @@ type Sesman struct {
 
 // SesCfg configures the session that will be created
 type SesCfg struct {
-	CookieName  string
-	Maxlifetime int64
+	CookieName      string
+	Maxlifetime     int64
+	VisitCookieName string
 }
 
 type ssProvider int

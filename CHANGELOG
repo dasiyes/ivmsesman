@@ -1,3 +1,5 @@
+v0.1.7  change in SesCfg - visit cookie name added
+
 v0.1.6  hotfix: Fixing Provider registering
 
 v0.1.4  hotfix: Fix for GC panics without sessions
