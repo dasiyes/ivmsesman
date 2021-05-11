@@ -125,7 +125,7 @@ type IvmSS interface {
 	// SessionRelease(w http.ResponseWriter)
 }
 
-// RegisterProvider registers a new provider of session stroage for the session management.
+// RegisterProvider registers a new provider of session storage for the session management.
 func RegisterProvider(name ssProvider, provider SessionRepository) {
 
 	if _, dup := providers[name.String()]; dup {
@@ -182,6 +182,18 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 	}
 
 	return
+}
+
+// Manager - Middleware to work with Session manager
+func (sm *Sesman) Manager(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		session := sm.SessionStart(w, r)
+		fmt.Printf("Session ID: %v\n", session.SessionID())
+
+		w.Header().Set("X-XSS-Protection", "1;mode=block")
+		w.Header().Set("X-Frame-Options", "deny")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // ActiveSessions will return the number of the active sessions in the session store
