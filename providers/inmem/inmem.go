@@ -15,18 +15,18 @@ var pder = &SessionStoreProvider{list: list.New()}
 type SessionStore struct {
 	sid          string
 	timeAccessed time.Time
-	value        map[interface{}]interface{}
+	value        map[string]interface{}
 }
 
 // Set stores the key:value pair in the repository
-func (st *SessionStore) Set(key, value interface{}) error {
+func (st *SessionStore) Set(key string, value interface{}) error {
 	st.value[key] = value
 	pder.UpdateTimeAccessed(st.sid)
 	return nil
 }
 
 // Get will retrieve the session value by the provided key
-func (st *SessionStore) Get(key interface{}) interface{} {
+func (st *SessionStore) Get(key string) interface{} {
 	_ = pder.UpdateTimeAccessed(st.sid)
 	if v, ok := st.value[key]; ok {
 		return v
@@ -35,7 +35,7 @@ func (st *SessionStore) Get(key interface{}) interface{} {
 }
 
 // Delete will remove a session value by the provided key
-func (st *SessionStore) Delete(key interface{}) error {
+func (st *SessionStore) Delete(key string) error {
 	delete(st.value, key)
 	pder.UpdateTimeAccessed(st.sid)
 	return nil
@@ -64,7 +64,8 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
 
-	v := make(map[interface{}]interface{}, 0)
+	v := make(map[string]interface{})
+	v["state"] = "new"
 	newsess := &SessionStore{sid: sid, timeAccessed: time.Now(), value: v}
 	element := pder.list.PushBack(newsess)
 	pder.sessions[sid] = element
@@ -165,6 +166,6 @@ func (pder *SessionStoreProvider) Flush() error {
 }
 
 func init() {
-	pder.sessions = make(map[string]*list.Element, 0)
+	pder.sessions = make(map[string]*list.Element)
 	ivmsesman.RegisterProvider(ivmsesman.Memory, pder)
 }

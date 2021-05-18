@@ -112,13 +112,13 @@ type SessionRepository interface {
 type IvmSS interface {
 
 	// Set a session key-value
-	Set(key, value interface{}) error
+	Set(key string, value interface{}) error
 
 	// Get the session value by its key
-	Get(key interface{}) interface{}
+	Get(key string) interface{}
 
 	// Delete the session by its key
-	Delete(key interface{}) error
+	Delete(key string) error
 
 	// SessionID returns the current session id
 	SessionID() string
