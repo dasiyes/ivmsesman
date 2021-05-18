@@ -13,6 +13,7 @@ import (
 )
 
 //
+// TODO: Review the session manager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 // The stored information can include the client IP address, User-Agent, e-mail, username, user ID, role, privilege level, access rights, language preferences, account ID, current state, last login, session timeouts, and other internal session details.
 // If the session objects and properties contain sensitive information, such as credit card numbers, it is required to duly encrypt and protect the session management repository.
 
@@ -28,6 +29,7 @@ type SesCfg struct {
 	CookieName      string
 	Maxlifetime     int64
 	VisitCookieName string
+	ProjectID       string
 }
 
 type ssProvider int
