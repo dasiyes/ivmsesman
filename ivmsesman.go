@@ -2,6 +2,7 @@
 package ivmsesman
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -60,6 +61,9 @@ func (ssp ssProvider) String() string {
 }
 
 var providers = make(map[string]SessionRepository)
+
+// Custom key for session obj in the request context
+type SessionCtxKey int
 
 // NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
@@ -155,7 +159,7 @@ func (sm *Sesman) sessionID() string {
 }
 
 // SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session IvmSS) {
+func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session IvmSS, err error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
@@ -165,7 +169,10 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 	if err != nil || cookie.Value == "" {
 
 		sid := sm.sessionID()
-		session, _ = sm.sessions.NewSession(sid)
+		session, err = sm.sessions.NewSession(sid)
+		if err != nil {
+			return nil, err
+		}
 
 		cookie := http.Cookie{
 			Name:     sm.cfg.CookieName,
@@ -189,12 +196,19 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 // Manager - Middleware to work with Session manager
 func (sm *Sesman) Manager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session := sm.SessionStart(w, r)
-		fmt.Printf("Session ID: %v\n", session.SessionID())
 
+		// Enhancing security
 		w.Header().Set("X-XSS-Protection", "1;mode=block")
 		w.Header().Set("X-Frame-Options", "deny")
-		next.ServeHTTP(w, r)
+
+		session, err := sm.SessionStart(w, r)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), SessionCtxKey(0), session)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

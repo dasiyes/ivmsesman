@@ -67,6 +67,7 @@ type SessionStoreProvider struct {
 func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
 
 	v := make(map[interface{}]interface{})
+	v["state"] = "new"
 	newsess := &SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}
 
 	wrtRsl, err := pder.client.Collection(pder.collection).Doc(sid).Set(context.TODO(), newsess)

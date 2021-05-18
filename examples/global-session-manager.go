@@ -35,7 +35,7 @@ func main() {
 
 // Here is an example that uses sessions for a login operation.
 func login(w http.ResponseWriter, r *http.Request) {
-	sess := globalSesMan.SessionStart(w, r)
+	sess, _ := globalSesMan.SessionStart(w, r)
 
 	r.ParseForm()
 	if r.Method == "GET" {
@@ -44,6 +44,6 @@ func login(w http.ResponseWriter, r *http.Request) {
 		t.Execute(w, sess.Get("username"))
 	} else {
 		sess.Set("username", r.Form["username"])
-		http.Redirect(w, r, "/", 302)
+		http.Redirect(w, r, "/", http.StatusFound)
 	}
 }

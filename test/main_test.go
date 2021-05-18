@@ -44,7 +44,7 @@ func TestNewSession(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 
-			ss = gsm.SessionStart(rr, req)
+			ss, _ = gsm.SessionStart(rr, req)
 
 			// Save the session id for the next request cycle
 			sid = ss.SessionID()
@@ -65,7 +65,7 @@ func TestNewSession(t *testing.T) {
 			req.AddCookie(&rc)
 
 			rr := httptest.NewRecorder()
-			ss = gsm.SessionStart(rr, req)
+			ss, err = gsm.SessionStart(rr, req)
 
 			if sid != ss.SessionID() {
 				t.Errorf("Unexpected difference for session id\n expected: %#v,\n got: %#v", sid, ss.SessionID())
@@ -163,3 +163,5 @@ func TestActiveSessions(t *testing.T) {
 		t.Errorf("Unexpected active sessions. Wanted 0, but got %d\n", as)
 	}
 }
+
+// TODO: Write test for the Firestore session store
