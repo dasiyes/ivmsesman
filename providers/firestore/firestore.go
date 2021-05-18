@@ -20,7 +20,7 @@ var pder = &SessionStoreProvider{collection: "sessions"}
 // SessionStore defines the storage to store the session data in
 type SessionStore struct {
 	Sid          string
-	TimeAccessed time.Time
+	TimeAccessed int64
 	Value        map[interface{}]interface{}
 }
 
@@ -54,7 +54,7 @@ func (st *SessionStore) SessionID() string {
 
 // GetLTA will return the LastTimeAccessedAt
 func (st *SessionStore) GetLTA() time.Time {
-	return st.TimeAccessed
+	return time.Unix(st.TimeAccessed, 0)
 }
 
 // SessionStoreProvider ensures storing sessions data
@@ -67,7 +67,7 @@ type SessionStoreProvider struct {
 func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
 
 	v := make(map[interface{}]interface{})
-	newsess := &SessionStore{Sid: sid, TimeAccessed: time.Now(), Value: v}
+	newsess := &SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}
 
 	wrtRsl, err := pder.client.Collection(pder.collection).Doc(sid).Set(context.TODO(), newsess)
 	if err != nil {
@@ -116,7 +116,6 @@ func (pder *SessionStoreProvider) Destroy(sid string) error {
 // SessionGC cleans all expired sessions
 func (pder *SessionStoreProvider) SessionGC(maxlifetime int64) {
 
-	fmt.Println("All expired sessions (deleting...)")
 	iter := pder.client.Collection(pder.collection).Where("TimeAccessed", "<", (time.Now().Unix() - maxlifetime)).Documents(context.TODO())
 
 	for {
@@ -126,7 +125,6 @@ func (pder *SessionStoreProvider) SessionGC(maxlifetime int64) {
 		}
 		if err != nil {
 			fmt.Printf("err while iterate expired sessions: %v\n", err.Error())
-			return
 		}
 		_, err = doc.Ref.Delete(context.TODO())
 		if err != nil {
@@ -213,7 +211,7 @@ func init() {
 		fmt.Printf("FATAL: firestore client init error %v", err.Error())
 		os.Exit(1)
 	}
-	defer client.Close()
+	// defer client.Close()
 	pder.client = client
 	ivmsesman.RegisterProvider(ivmsesman.Firestore, pder)
 }
