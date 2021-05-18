@@ -1,3 +1,5 @@
+v0.2.0  implementing Firestore as session store provider
+
 v0.1.7  change in SesCfg - visit cookie name added
 
 v0.1.6  hotfix: Fixing Provider registering
