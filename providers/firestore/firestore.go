@@ -11,7 +11,6 @@ import (
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 
-	// firestore "cloud.google.com/go/firestore/apiv1beta1"
 	"github.com/dasiyes/ivmsesman"
 )
 
@@ -70,11 +69,10 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error
 	v["state"] = "new"
 	newsess := &SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}
 
-	wrtRsl, err := pder.client.Collection(pder.collection).Doc(sid).Set(context.TODO(), newsess)
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Set(context.TODO(), newsess)
 	if err != nil {
 		return nil, fmt.Errorf("unable to save in session repository - error: %v", err)
 	}
-	fmt.Printf("wrtRsl: %v\n", wrtRsl)
 	return newsess, nil
 }
 
@@ -88,17 +86,16 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, err
 		if strings.Contains(err.Error(), "Missing or insufficient permissions") {
 			return nil, errors.New("insufficient permissions to read data from the session store")
 		} else {
-			fmt.Printf("err while read session id: %v, err: %v\n", sid, err.Error())
 			if !docses.Exists() {
 				return pder.NewSession(sid)
 			}
-			return nil, err
+			return nil, fmt.Errorf("err while read session id: %v, err: %v", sid, err)
 		}
 	}
 
 	err = docses.DataTo(ss)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while converting firstore doc to session object: %v", err)
 	}
 
 	return &ss, nil
@@ -119,18 +116,23 @@ func (pder *SessionStoreProvider) SessionGC(maxlifetime int64) {
 
 	iter := pder.client.Collection(pder.collection).Where("TimeAccessed", "<", (time.Now().Unix() - maxlifetime)).Documents(context.TODO())
 
+	var erritr error
+
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			fmt.Printf("err while iterate expired sessions: %v\n", err.Error())
+			erritr = fmt.Errorf("err while iterate expired session id: %v, err: %v", doc.Ref.ID, err)
 		}
 		_, err = doc.Ref.Delete(context.TODO())
 		if err != nil {
-			fmt.Printf("error deleting session id %v, err: %v\n", doc.Ref.ID, err.Error())
+			erritr = fmt.Errorf("error deleting session id %v, err: %v", doc.Ref.ID, err)
 		}
+	}
+	if erritr != nil {
+		fmt.Printf("error stack: %v", erritr)
 	}
 }
 
@@ -144,8 +146,7 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 			},
 		})
 	if err != nil {
-		fmt.Printf("err while updating time accessed for sessions id %v, err: %v\n", sid, err.Error())
-		return err
+		return fmt.Errorf("err while updating time accessed for sessions id %v, err: %v", sid, err)
 	}
 	return nil
 }
@@ -154,19 +155,23 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 func (pder *SessionStoreProvider) ActiveSessions() int {
 
 	var errcnt, cnt = 0, 0
+	var erritr error
 
 	iter := pder.client.Collection(pder.collection).Documents(context.TODO())
 
 	for {
-		_, err := iter.Next()
+		d, err := iter.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
 			errcnt++
-			fmt.Printf("%v error(s) counting sessions: %v\n", errcnt, err.Error())
+			erritr = fmt.Errorf("session id %v, error: %v", d.Ref.ID, err)
 		}
 		cnt++
+	}
+	if erritr != nil {
+		fmt.Printf("%d errors while counting %d active sessions, error stack: %v", errcnt, cnt, erritr)
 	}
 	return cnt
 }
@@ -184,7 +189,7 @@ func (pder *SessionStoreProvider) Exists(sid string) bool {
 // Flush will delete all elements for sessions data
 func (pder *SessionStoreProvider) Flush() error {
 
-	var err error
+	var erritr error
 
 	iter := pder.client.Collection(pder.collection).Documents(context.TODO())
 
@@ -194,14 +199,14 @@ func (pder *SessionStoreProvider) Flush() error {
 			break
 		}
 		if err != nil {
-			fmt.Printf("error flushing sessions: %v\n", err.Error())
+			erritr = fmt.Errorf("error flushing sessions id: %v, err: %v", docses.Ref.ID, err)
 		}
 		_, err = docses.Ref.Delete(context.TODO())
 		if err != nil {
-			fmt.Printf("while flushing sessions - delete session id: %v, err: %v\n", docses.Ref.ID, err.Error())
+			erritr = fmt.Errorf("while flushing sessions - delete session id: %v, err: %v", docses.Ref.ID, err)
 		}
 	}
-	return err
+	return erritr
 }
 
 func init() {

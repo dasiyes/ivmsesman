@@ -203,6 +203,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 
 		session, err := sm.SessionStart(w, r)
 		if err != nil {
+			fmt.Printf("dropping the request due to session management error: %v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
