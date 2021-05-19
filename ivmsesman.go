@@ -209,10 +209,12 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		}
 
 		var sck SessionCtxKey = 0
-		var currentSession map[string]interface{}
-		currentSession["sid"] = session.SessionID()
-		currentSession["timeAccessed"] = session.GetLTA()
-		currentSession["Value"] = map[string]interface{}{"state": session.Get("state")}
+		var sesval = map[string]interface{}{"state": session.Get("state")}
+		var currentSession = map[string]interface{}{
+			"sid":          session.SessionID(),
+			"timeAccessed": session.GetLTA(),
+			"value":        sesval,
+		}
 
 		ctx := context.WithValue(r.Context(), sck, &currentSession)
 		next.ServeHTTP(w, r.WithContext(ctx))
