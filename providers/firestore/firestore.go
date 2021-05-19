@@ -67,13 +67,13 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error
 
 	v := make(map[string]interface{})
 	v["state"] = "new"
-	newsess := &SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}
+	newsess := SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}
 
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Set(context.TODO(), newsess)
 	if err != nil {
 		return nil, fmt.Errorf("unable to save in session repository - error: %v", err)
 	}
-	return newsess, nil
+	return &newsess, nil
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
