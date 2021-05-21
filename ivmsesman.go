@@ -209,7 +209,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		}
 
 		var sck SessionCtxKey = 0
-		var sesval = map[string]interface{}{"state": session.Get("state")}
+		var sesval = map[string]interface{}{"value": session.Get("Value")}
 		var currentSession = map[string]interface{}{
 			"sid":          session.SessionID(),
 			"timeAccessed": session.GetLTA(),
