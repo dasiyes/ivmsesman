@@ -211,12 +211,15 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (sesval *
 		}
 	}
 
-	sv := sesVal{
-		Sid:          session.Get("Sid").(string),
-		LastAccessed: session.GetLTA(),
-		Value:        session.Get("Value").(map[string]interface{}),
+	siv := session.(*sesVal)
+	sv := siv.Value
+	switch sv["state"].(string) {
+	case "New":
+		fmt.Printf("state is: %v", sv["state"].(string))
+	default:
+		fmt.Printf("unknow state: %v", sv["state"].(string))
 	}
-	return &sv, nil
+	return siv, nil
 }
 
 // Manager - Middleware to work with Session manager
@@ -307,6 +310,26 @@ func (sm *Sesman) Exists(w http.ResponseWriter, r *http.Request) (bool, error) {
 	defer sm.lock.Unlock()
 
 	return sm.sessions.Exists(cookie.Value), nil
+}
+
+func (sv *sesVal) Delete(key string) error {
+	return nil
+}
+
+func (sv *sesVal) Set(key string, value interface{}) error {
+	return nil
+}
+
+func (sv *sesVal) Get(key string) interface{} {
+	return nil
+}
+
+func (sv *sesVal) SessionID() string {
+	return ""
+}
+
+func (sv *sesVal) GetLTA() time.Time {
+	return time.Unix(0, 0)
 }
 
 // ErrUnknownSessionID  will be returned when a session id is required for a operation but it is missing or wrong value
