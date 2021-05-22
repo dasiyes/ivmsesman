@@ -164,10 +164,12 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	cookie, err := r.Cookie("ivmid")
-	fmt.Printf("cookie name: %v, cookie Value: %v, error: %v\n", sm.cfg.CookieName, cookie.Value, err.Error())
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	fmt.Printf("cookie name: %v, cookie Value: %v\n", sm.cfg.CookieName, cookie.Value)
 
-	if err != nil || cookie.Value == "" {
+	if err != nil && err == http.ErrNoCookie {
+
+		fmt.Printf("while getting cookie error: %v\n", err)
 
 		sid := sm.sessionID()
 		session, err = sm.sessions.NewSession(sid)
@@ -206,7 +208,6 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 func (sm *Sesman) Manager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Printf("config cookie name: %v", sm.cfg.CookieName)
 		// Enhancing security
 		w.Header().Set("X-XSS-Protection", "1;mode=block")
 		w.Header().Set("X-Frame-Options", "deny")
