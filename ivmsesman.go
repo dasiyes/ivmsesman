@@ -165,6 +165,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 	defer sm.lock.Unlock()
 
 	cookie, err := r.Cookie(sm.cfg.CookieName)
+	fmt.Printf("cookie name: %v, cookie Value: %v, error: %v\n", sm.cfg.CookieName, cookie.Value, err.Error())
 
 	if err != nil || cookie.Value == "" {
 
