@@ -186,8 +186,16 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 
 	} else {
 
-		sid, _ := url.QueryUnescape(cookie.Value)
-		session, _ = sm.sessions.FindOrCreate(sid)
+		sid, err := url.QueryUnescape(cookie.Value)
+		if err != nil {
+			return nil, fmt.Errorf("unable to unescape the session id, error %v", err)
+		}
+		fmt.Printf("cookie/session id value: %v", sid)
+		session, err = sm.sessions.FindOrCreate(sid)
+		if err != nil {
+			return nil, fmt.Errorf("unable to acquire the session id %v , error %v", sid, err)
+		}
+		return session, nil
 	}
 
 	return
