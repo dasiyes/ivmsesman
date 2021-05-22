@@ -82,10 +82,10 @@ func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 // SessionRepository interface for the session storage
 type SessionRepository interface {
 	// NewSession will initiate a new session and return its object
-	NewSession(sid string) (*CurrentSession, error)
+	NewSession(sid string) (IvmSS, error)
 
 	// FindOrCreate will search the repository for a session id and if not found will create a new one with the given id
-	FindOrCreate(sid string) (*CurrentSession, error)
+	FindOrCreate(sid string) (IvmSS, error)
 
 	//Exists will check the session storage for a session id
 	Exists(sid string) bool
@@ -160,14 +160,14 @@ func (sm *Sesman) sessionID() string {
 	return sid.String()
 }
 
-type CurrentSession struct {
-	SessionID      string
-	LastAccessTime int64
-	Value          map[string]interface{}
-}
+// type CurrentSession struct {
+// 	SessionID      string
+// 	LastAccessTime int64
+// 	Value          map[string]interface{}
+// }
 
 // SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session *CurrentSession, err error) {
+func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session IvmSS, err error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
@@ -201,7 +201,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 		if err != nil {
 			return nil, fmt.Errorf("unable to unescape the session id, error %v", err)
 		}
-		fmt.Printf("cookie/session id value: %v", sid)
+		fmt.Printf("cookie/session id value: %v\n", sid)
 		session, err = sm.sessions.FindOrCreate(sid)
 		if err != nil {
 			return nil, fmt.Errorf("unable to acquire the session id %v , error %v", sid, err)
@@ -226,7 +226,11 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), sck, &session)
+		sesVal := session.Get("Value").(map[string]interface{})
+		state := sesVal["state"].(string)
+		fmt.Printf("... acquired state is: %s", state)
+
+		ctx := context.WithValue(r.Context(), sck, &state)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

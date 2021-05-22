@@ -47,8 +47,8 @@ func (st *SessionStore) SessionID() string {
 }
 
 // GetLTA will return the LastTimeAccessedAt
-func (st *SessionStore) GetLTA() int64 {
-	return st.timeAccessed
+func (st *SessionStore) GetLTA() time.Time {
+	return time.Unix(st.timeAccessed, 0)
 }
 
 // SessionStoreProvider ensures storing sessions data
@@ -59,25 +59,25 @@ type SessionStoreProvider struct {
 }
 
 // NewSession creates a new session value in the store with sid as a key
-func (pder *SessionStoreProvider) NewSession(sid string) (*ivmsesman.CurrentSession, error) {
+func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
 
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
 
 	v := make(map[string]interface{})
 	v["state"] = "new"
-	newsess := ivmsesman.CurrentSession{SessionID: sid, LastAccessTime: time.Now().Unix(), Value: v}
+	newsess := SessionStore{sid: sid, timeAccessed: time.Now().Unix(), value: v}
 	element := pder.list.PushBack(newsess)
 	pder.sessions[sid] = element
 	return &newsess, nil
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
-func (pder *SessionStoreProvider) FindOrCreate(sid string) (*ivmsesman.CurrentSession, error) {
+func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, error) {
 
 	if element, ok := pder.sessions[sid]; ok {
-		sesel := element.Value.(*ivmsesman.CurrentSession)
-		sesel.LastAccessTime = time.Now().Unix()
+		sesel := element.Value.(*SessionStore)
+		sesel.timeAccessed = time.Now().Unix()
 		return sesel, nil
 	}
 
