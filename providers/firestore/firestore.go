@@ -16,7 +16,7 @@ import (
 
 var pder = &SessionStoreProvider{collection: "sessions"}
 
-// SessionStore defines the storage to store the session data in
+// SessionStore defines the document to store the session data in NoSQL db
 type SessionStore struct {
 	Sid          string
 	TimeAccessed int64
@@ -66,7 +66,8 @@ type SessionStoreProvider struct {
 func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
 
 	v := make(map[string]interface{})
-	v["state"] = "new"
+	v["state"] = "New"
+
 	newsess := SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}
 
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Set(context.TODO(), newsess)

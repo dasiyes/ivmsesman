@@ -164,7 +164,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	fmt.Printf("cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
+	fmt.Printf("[SessionStart] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 	if err != nil && err == http.ErrNoCookie {
 
@@ -182,6 +182,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 			Path:     "/",
 			HttpOnly: true,
 			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
 			MaxAge:   int(sm.cfg.Maxlifetime)}
 
 		http.SetCookie(w, &cookie)
@@ -197,15 +198,17 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 		if err != nil {
 			return nil, fmt.Errorf("unable to acquire the session id %v , error %v", sid, err)
 		}
-		return session, nil
 	}
 
-	return
+	return session, nil
 }
 
 // Manager - Middleware to work with Session manager
 func (sm *Sesman) Manager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		fmt.Printf("[Manager] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
+		fmt.Printf("request Cookie: %v", r.Cookies())
 
 		// Enhancing security
 		w.Header().Set("X-XSS-Protection", "1;mode=block")
