@@ -65,6 +65,8 @@ var providers = make(map[string]SessionRepository)
 // Custom key for session obj in the request context
 type SessionCtxKey int
 
+var sck SessionCtxKey = 0
+
 // NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 	provider, ok := providers[ssProvider.String()]
@@ -80,10 +82,10 @@ func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 // SessionRepository interface for the session storage
 type SessionRepository interface {
 	// NewSession will initiate a new session and return its object
-	NewSession(sid string) (IvmSS, error)
+	NewSession(sid string) (*CurrentSession, error)
 
 	// FindOrCreate will search the repository for a session id and if not found will create a new one with the given id
-	FindOrCreate(sid string) (IvmSS, error)
+	FindOrCreate(sid string) (*CurrentSession, error)
 
 	//Exists will check the session storage for a session id
 	Exists(sid string) bool
@@ -158,8 +160,14 @@ func (sm *Sesman) sessionID() string {
 	return sid.String()
 }
 
+type CurrentSession struct {
+	SessionID      string
+	LastAccessTime int64
+	Value          map[string]interface{}
+}
+
 // SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session IvmSS, err error) {
+func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session *CurrentSession, err error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
@@ -207,9 +215,6 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 func (sm *Sesman) Manager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Printf("[Manager] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
-		fmt.Printf("request Cookie: %v", r.Cookies())
-
 		// Enhancing security
 		w.Header().Set("X-XSS-Protection", "1;mode=block")
 		w.Header().Set("X-Frame-Options", "deny")
@@ -221,14 +226,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			return
 		}
 
-		var sck SessionCtxKey = 0
-		var currentSession = map[string]interface{}{
-			"sid":          session.SessionID(),
-			"timeAccessed": session.GetLTA(),
-			"value":        session.Get("Value").(map[string]string),
-		}
-
-		ctx := context.WithValue(r.Context(), sck, &currentSession)
+		ctx := context.WithValue(r.Context(), sck, &session)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

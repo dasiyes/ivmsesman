@@ -14,7 +14,7 @@ var pder = &SessionStoreProvider{list: list.New()}
 // SessionStore defines the storage to store the session data in
 type SessionStore struct {
 	sid          string
-	timeAccessed time.Time
+	timeAccessed int64
 	value        map[string]interface{}
 }
 
@@ -47,7 +47,7 @@ func (st *SessionStore) SessionID() string {
 }
 
 // GetLTA will return the LastTimeAccessedAt
-func (st *SessionStore) GetLTA() time.Time {
+func (st *SessionStore) GetLTA() int64 {
 	return st.timeAccessed
 }
 
@@ -59,25 +59,25 @@ type SessionStoreProvider struct {
 }
 
 // NewSession creates a new session value in the store with sid as a key
-func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) NewSession(sid string) (*ivmsesman.CurrentSession, error) {
 
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
 
 	v := make(map[string]interface{})
 	v["state"] = "new"
-	newsess := &SessionStore{sid: sid, timeAccessed: time.Now(), value: v}
+	newsess := ivmsesman.CurrentSession{SessionID: sid, LastAccessTime: time.Now().Unix(), Value: v}
 	element := pder.list.PushBack(newsess)
 	pder.sessions[sid] = element
-	return newsess, nil
+	return &newsess, nil
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
-func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) FindOrCreate(sid string) (*ivmsesman.CurrentSession, error) {
 
 	if element, ok := pder.sessions[sid]; ok {
-		sesel := element.Value.(*SessionStore)
-		sesel.timeAccessed = time.Now()
+		sesel := element.Value.(*ivmsesman.CurrentSession)
+		sesel.LastAccessTime = time.Now().Unix()
 		return sesel, nil
 	}
 
@@ -109,7 +109,7 @@ func (pder *SessionStoreProvider) SessionGC(maxlifetime int64) {
 			break
 		}
 
-		if (element.Value.(*SessionStore).timeAccessed.Unix() + maxlifetime) < time.Now().Unix() {
+		if (element.Value.(*SessionStore).timeAccessed + maxlifetime) < time.Now().Unix() {
 			pder.list.Remove(element)
 			delete(pder.sessions, element.Value.(*SessionStore).sid)
 		} else {
@@ -125,7 +125,7 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 	defer pder.lock.Unlock()
 
 	if element, ok := pder.sessions[sid]; ok {
-		element.Value.(*SessionStore).timeAccessed = time.Now()
+		element.Value.(*SessionStore).timeAccessed = time.Now().Unix()
 		pder.list.MoveToFront(element)
 		return nil
 	}

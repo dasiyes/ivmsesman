@@ -63,12 +63,12 @@ type SessionStoreProvider struct {
 }
 
 // NewSession creates a new session value in the store with sid as a key
-func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) NewSession(sid string) (*ivmsesman.CurrentSession, error) {
 
 	v := make(map[string]interface{})
 	v["state"] = "New"
 
-	newsess := SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}
+	newsess := ivmsesman.CurrentSession{SessionID: sid, LastAccessTime: time.Now().Unix(), Value: v}
 
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Set(context.TODO(), newsess)
 	if err != nil {
@@ -78,9 +78,9 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
-func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) FindOrCreate(sid string) (*ivmsesman.CurrentSession, error) {
 
-	var ss SessionStore
+	var ss ivmsesman.CurrentSession
 
 	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
 	if err != nil {
