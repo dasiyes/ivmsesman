@@ -160,17 +160,20 @@ func (sm *Sesman) sessionID() string {
 	return sid.String()
 }
 
-// type CurrentSession struct {
-// 	SessionID      string
-// 	LastAccessTime int64
-// 	Value          map[string]interface{}
-// }
+// Holds the session Value returned by the IvmSS interface
+type sesVal struct {
+	Sid          string
+	LastAccessed time.Time
+	Value        map[string]interface{}
+}
 
 // SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session IvmSS, err error) {
+func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (sesval *sesVal, err error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
+
+	var session IvmSS
 
 	fmt.Printf("[SessionStart] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
 	cookie, err := r.Cookie(sm.cfg.CookieName)
@@ -208,7 +211,12 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (session 
 		}
 	}
 
-	return session, nil
+	sv := sesVal{
+		Sid:          session.Get("Sid").(string),
+		LastAccessed: session.GetLTA(),
+		Value:        session.Get("Value").(map[string]interface{}),
+	}
+	return &sv, nil
 }
 
 // Manager - Middleware to work with Session manager
@@ -226,11 +234,9 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			return
 		}
 
-		sesVal := session.Get("Value").(map[string]interface{})
-		state := sesVal["state"].(string)
-		fmt.Printf("... acquired state is: %s", state)
+		fmt.Printf("... acquired state is: %v", session)
 
-		ctx := context.WithValue(r.Context(), sck, &state)
+		ctx := context.WithValue(r.Context(), sck, session)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
