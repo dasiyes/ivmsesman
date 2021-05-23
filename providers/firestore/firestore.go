@@ -20,12 +20,12 @@ var pder = &SessionStoreProvider{collection: "sessions"}
 type SessionStore struct {
 	Sid          string
 	TimeAccessed int64
-	Value        map[interface{}]interface{}
+	Value        map[string]interface{}
 }
 
 // Set stores the key:value pair in the repository
 func (st *SessionStore) Set(key, value interface{}) error {
-	st.Value[key] = value
+	st.Value[key.(string)] = value
 	pder.UpdateTimeAccessed(st.Sid)
 	return nil
 }
@@ -33,7 +33,7 @@ func (st *SessionStore) Set(key, value interface{}) error {
 // Get will retrieve the session value by the provided key
 func (st *SessionStore) Get(key interface{}) interface{} {
 	_ = pder.UpdateTimeAccessed(st.Sid)
-	if v, ok := st.Value[key]; ok {
+	if v, ok := st.Value[key.(string)]; ok {
 		return v
 	}
 	return nil
@@ -41,7 +41,7 @@ func (st *SessionStore) Get(key interface{}) interface{} {
 
 // Delete will remove a session value by the provided key
 func (st *SessionStore) Delete(key interface{}) error {
-	delete(st.Value, key)
+	delete(st.Value, key.(string))
 	pder.UpdateTimeAccessed(st.Sid)
 	return nil
 }
@@ -65,7 +65,7 @@ type SessionStoreProvider struct {
 // NewSession creates a new session value in the store with sid as a key
 func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.SessionStore, error) {
 
-	v := make(map[interface{}]interface{})
+	v := make(map[string]interface{})
 	v["state"] = "New"
 
 	newsess := SessionStore{Sid: sid, TimeAccessed: time.Now().Unix(), Value: v}

@@ -169,6 +169,10 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 	var session SessionStore
 
 	fmt.Printf("[SessionStart] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
+
+	for _, rck := range r.Cookies() {
+		fmt.Printf("range cookie: %v\n", rck)
+	}
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 	if err != nil && err == http.ErrNoCookie {
 
