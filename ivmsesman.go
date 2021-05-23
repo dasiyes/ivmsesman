@@ -82,17 +82,17 @@ func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 // SessionRepository interface for the session storage
 type SessionRepository interface {
 	// NewSession will initiate a new session and return its object
-	NewSession(sid string) (IvmSS, error)
+	NewSession(sid string) (SessionStore, error)
 
 	// FindOrCreate will search the repository for a session id and if not found will create a new one with the given id
-	FindOrCreate(sid string) (IvmSS, error)
+	FindOrCreate(sid string) (SessionStore, error)
 
 	//Exists will check the session storage for a session id
 	Exists(sid string) bool
 
 	// FindAll will return slice of all active sessions
 	// TODO: FindAll could be expensive. Think if there is a real use-case about it
-	// FindAll() []*IvmSS
+	// FindAll() []*SessionStore
 
 	//ActiveSessions will return the number of the active sessions in the session store
 	ActiveSessions() int
@@ -110,17 +110,17 @@ type SessionRepository interface {
 	Flush() error
 }
 
-// IvmSS is sesstion store implemenation of interfce to the valid opertions over a session
-type IvmSS interface {
+// SessionStore is session store implemenation of interfce to the valid opertions over a session
+type SessionStore interface {
 
 	// Set a session key-value
-	Set(key string, value interface{}) error
+	Set(key, value interface{}) error
 
 	// Get the session value by its key
-	Get(key string) interface{}
+	Get(key interface{}) interface{}
 
 	// Delete the session by its key
-	Delete(key string) error
+	Delete(key interface{}) error
 
 	// SessionID returns the current session id
 	SessionID() string
@@ -160,20 +160,13 @@ func (sm *Sesman) sessionID() string {
 	return sid.String()
 }
 
-// Holds the session Value returned by the IvmSS interface
-type sesVal struct {
-	Sid          string
-	LastAccessed time.Time
-	Value        map[string]interface{}
-}
-
 // SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (sesval *sesVal, err error) {
+func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionStore, error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	var session IvmSS
+	var session SessionStore
 
 	fmt.Printf("[SessionStart] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
 	cookie, err := r.Cookie(sm.cfg.CookieName)
@@ -211,15 +204,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (sesval *
 		}
 	}
 
-	siv := session.(*sesVal)
-	sv := siv.Value
-	switch sv["state"].(string) {
-	case "New":
-		fmt.Printf("state is: %v", sv["state"].(string))
-	default:
-		fmt.Printf("unknow state: %v", sv["state"].(string))
-	}
-	return siv, nil
+	return session, nil
 }
 
 // Manager - Middleware to work with Session manager
@@ -237,7 +222,11 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			return
 		}
 
-		fmt.Printf("... acquired state is: %v", session)
+		sid := session.Get("Sid").(string)
+		sesValue := session.Get("Value").(map[interface{}]interface{})
+		sesState := sesValue["state"].(string)
+
+		fmt.Printf("... acquired state is: %v, sessionID: %v\n", sesState, sid)
 
 		ctx := context.WithValue(r.Context(), sck, session)
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -310,26 +299,6 @@ func (sm *Sesman) Exists(w http.ResponseWriter, r *http.Request) (bool, error) {
 	defer sm.lock.Unlock()
 
 	return sm.sessions.Exists(cookie.Value), nil
-}
-
-func (sv *sesVal) Delete(key string) error {
-	return nil
-}
-
-func (sv *sesVal) Set(key string, value interface{}) error {
-	return nil
-}
-
-func (sv *sesVal) Get(key string) interface{} {
-	return nil
-}
-
-func (sv *sesVal) SessionID() string {
-	return ""
-}
-
-func (sv *sesVal) GetLTA() time.Time {
-	return time.Unix(0, 0)
 }
 
 // ErrUnknownSessionID  will be returned when a session id is required for a operation but it is missing or wrong value

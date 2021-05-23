@@ -21,7 +21,7 @@ var cfg *i.SesCfg = &i.SesCfg{
 // ######### Testing Session Manager #########
 
 var gsm *i.Sesman
-var ss i.IvmSS
+var ss i.SessionStore
 var sid string
 
 // Testing create a New Session

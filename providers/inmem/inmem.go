@@ -15,18 +15,18 @@ var pder = &SessionStoreProvider{list: list.New()}
 type SessionStore struct {
 	sid          string
 	timeAccessed int64
-	value        map[string]interface{}
+	value        map[interface{}]interface{}
 }
 
 // Set stores the key:value pair in the repository
-func (st *SessionStore) Set(key string, value interface{}) error {
+func (st *SessionStore) Set(key, value interface{}) error {
 	st.value[key] = value
 	pder.UpdateTimeAccessed(st.sid)
 	return nil
 }
 
 // Get will retrieve the session value by the provided key
-func (st *SessionStore) Get(key string) interface{} {
+func (st *SessionStore) Get(key interface{}) interface{} {
 	_ = pder.UpdateTimeAccessed(st.sid)
 	if v, ok := st.value[key]; ok {
 		return v
@@ -35,7 +35,7 @@ func (st *SessionStore) Get(key string) interface{} {
 }
 
 // Delete will remove a session value by the provided key
-func (st *SessionStore) Delete(key string) error {
+func (st *SessionStore) Delete(key interface{}) error {
 	delete(st.value, key)
 	pder.UpdateTimeAccessed(st.sid)
 	return nil
@@ -59,12 +59,12 @@ type SessionStoreProvider struct {
 }
 
 // NewSession creates a new session value in the store with sid as a key
-func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.SessionStore, error) {
 
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
 
-	v := make(map[string]interface{})
+	v := make(map[interface{}]interface{})
 	v["state"] = "new"
 	newsess := SessionStore{sid: sid, timeAccessed: time.Now().Unix(), value: v}
 	element := pder.list.PushBack(newsess)
@@ -73,7 +73,7 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
-func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionStore, error) {
 
 	if element, ok := pder.sessions[sid]; ok {
 		sesel := element.Value.(*SessionStore)
