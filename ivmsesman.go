@@ -180,9 +180,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 
 		sid := sm.sessionID()
 		session, err = sm.sessions.NewSession(sid)
-		if session == nil {
-			fmt.Printf("session is nil: %v", session.SessionID())
-		}
+
 		if err != nil {
 			return nil, fmt.Errorf("error creating a new session: %v", err)
 		}
@@ -211,6 +209,15 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 		}
 	}
 
+	if session == nil {
+		fmt.Printf("session is nil: %v", session.SessionID())
+	}
+	sid := session.SessionID()
+	sesValue := session.Get("Value").(map[string]interface{})
+	sesState := sesValue["state"].(string)
+
+	fmt.Printf("session interface sid: %v, value[key], value: %v", sid, sesState)
+
 	return session, nil
 }
 
@@ -229,8 +236,8 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			return
 		}
 
-		sid := session.Get("Sid").(string)
-		sesValue := session.Get("Value").(map[interface{}]interface{})
+		sid := session.SessionID()
+		sesValue := session.Get("Value").(map[string]interface{})
 		sesState := sesValue["state"].(string)
 
 		fmt.Printf("... acquired state is: %v, sessionID: %v\n", sesState, sid)
