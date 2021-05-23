@@ -180,8 +180,11 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 
 		sid := sm.sessionID()
 		session, err = sm.sessions.NewSession(sid)
+		if session == nil {
+			fmt.Printf("session is nil: %v", session.SessionID())
+		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error creating a new session: %v", err)
 		}
 
 		cookie := http.Cookie{
