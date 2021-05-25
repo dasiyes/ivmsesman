@@ -61,7 +61,7 @@ func (st *SessionStore) GetLTA() time.Time {
 type SessionStoreProvider struct {
 	client     *firestore.Client
 	collection string
-	sessions   map[string]interface{}
+	// sessions   map[string]interface{}
 }
 
 // NewSession creates a new session value in the store with sid as a key
