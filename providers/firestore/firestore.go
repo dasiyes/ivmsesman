@@ -48,6 +48,7 @@ func (st *SessionStore) Delete(key interface{}) error {
 
 // SessionID will retrieve the id of the current session
 func (st *SessionStore) SessionID() string {
+	fmt.Printf("Sid: %v", st.TimeAccessed)
 	return st.Sid
 }
 
@@ -60,6 +61,7 @@ func (st *SessionStore) GetLTA() time.Time {
 type SessionStoreProvider struct {
 	client     *firestore.Client
 	collection string
+	sessions   map[string]interface{}
 }
 
 // NewSession creates a new session value in the store with sid as a key
@@ -74,6 +76,8 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.SessionStore
 	if err != nil {
 		return nil, fmt.Errorf("unable to save in session repository - error: %v", err)
 	}
+	pder.sessions[sid] = newsess
+
 	return &newsess, nil
 }
 

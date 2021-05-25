@@ -67,7 +67,7 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.SessionStore
 	v := make(map[interface{}]interface{})
 	v["state"] = "new"
 	newsess := SessionStore{sid: sid, timeAccessed: time.Now().Unix(), value: v}
-	element := pder.list.PushBack(newsess)
+	element := pder.list.PushBack(&newsess)
 	pder.sessions[sid] = element
 	return &newsess, nil
 }

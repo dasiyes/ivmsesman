@@ -168,22 +168,19 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 
 	var session SessionStore
 
-	fmt.Printf("[SessionStart] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
-
-	for _, rck := range r.Cookies() {
-		fmt.Printf("range cookie: %v\n", rck)
-	}
 	cookie, err := r.Cookie(sm.cfg.CookieName)
-	if err != nil && err == http.ErrNoCookie {
 
-		fmt.Printf("while getting cookie error: %v\n", err)
+	if (err != nil && err == http.ErrNoCookie) || cookie.Value == "" {
 
 		sid := sm.sessionID()
-		session, err = sm.sessions.NewSession(sid)
+		fmt.Printf("[SessionStart-1] generated sid: %v\n", sid)
 
+		session, err = sm.sessions.NewSession(sid)
 		if err != nil {
 			return nil, fmt.Errorf("error creating a new session: %v", err)
 		}
+
+		fmt.Printf("[SessionStart-2] session ID: %v\n", session.SessionID())
 
 		cookie := http.Cookie{
 			Name:     sm.cfg.CookieName,
@@ -202,21 +199,12 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 		if err != nil {
 			return nil, fmt.Errorf("unable to unescape the session id, error %v", err)
 		}
-		fmt.Printf("cookie/session id value: %v\n", sid)
+
 		session, err = sm.sessions.FindOrCreate(sid)
 		if err != nil {
 			return nil, fmt.Errorf("unable to acquire the session id %v , error %v", sid, err)
 		}
 	}
-
-	if session == nil {
-		fmt.Printf("session is nil: %v", session.SessionID())
-	}
-	sid := session.SessionID()
-	sesValue := session.Get("Value").(map[string]interface{})
-	sesState := sesValue["state"].(string)
-
-	fmt.Printf("session interface sid: %v, value[key], value: %v", sid, sesState)
 
 	return session, nil
 }
@@ -230,19 +218,19 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "deny")
 
 		session, err := sm.SessionStart(w, r)
-		if err != nil {
+		if err != nil || session == nil {
 			fmt.Printf("dropping the request due to session management error: %v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
 		sid := session.SessionID()
-		sesValue := session.Get("Value").(map[string]interface{})
-		sesState := sesValue["state"].(string)
+		fmt.Printf("session interface sid: %v\n", sid)
 
-		fmt.Printf("... acquired state is: %v, sessionID: %v\n", sesState, sid)
+		sesValue := session.Get("state").(string)
+		fmt.Printf("session interface sid: %v, value[key], value: %v", sid, sesValue)
 
-		ctx := context.WithValue(r.Context(), sck, session)
+		ctx := context.WithValue(r.Context(), sck, sesValue)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
