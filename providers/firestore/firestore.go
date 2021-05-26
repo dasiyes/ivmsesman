@@ -148,7 +148,7 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 		[]firestore.Update{
 			{
 				Path:  "TimeAccessed",
-				Value: firestore.ServerTimestamp,
+				Value: time.Now().Unix(),
 			},
 		})
 	if err != nil {
