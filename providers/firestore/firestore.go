@@ -99,7 +99,7 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionSto
 		}
 	}
 
-	err = docses.DataTo(ss)
+	err = docses.DataTo(&ss)
 	if err != nil {
 		return nil, fmt.Errorf("error while converting firstore doc to session object: %v", err)
 	}
