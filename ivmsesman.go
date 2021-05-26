@@ -228,7 +228,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		fmt.Printf("session interface sid: %v\n", sid)
 
 		sesValue := session.Get("state").(string)
-		fmt.Printf("session interface sid: %v, value[key], value: %v", sid, sesValue)
+		fmt.Printf("session interface sid: %v, value[key], value: %v\n", sid, sesValue)
 
 		ctx := context.WithValue(r.Context(), sck, sesValue)
 		next.ServeHTTP(w, r.WithContext(ctx))

@@ -84,7 +84,7 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.SessionStore
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
 func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionStore, error) {
 
-	var ss SessionStore
+	var ss SessionStore = SessionStore{}
 
 	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
 	if err != nil {
@@ -92,6 +92,7 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionSto
 			return nil, errors.New("insufficient permissions to read data from the session store")
 		} else {
 			if !docses.Exists() {
+				fmt.Printf("sid: %v was not found in the session store. A new session will be created", sid)
 				return pder.NewSession(sid)
 			}
 			return nil, fmt.Errorf("err while read session id: %v, err: %v", sid, err)
