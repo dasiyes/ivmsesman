@@ -63,9 +63,9 @@ func (ssp ssProvider) String() string {
 var providers = make(map[string]SessionRepository)
 
 // Custom key for session obj in the request context
-type SessionCtxKey int
+type SessionCtxKey string
 
-var sck SessionCtxKey = 0
+var sckState SessionCtxKey = "sessionState"
 
 // NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
@@ -230,7 +230,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		sesValue := session.Get("state").(string)
 		fmt.Printf("session interface sid: %v, value[key], value: %v\n", sid, sesValue)
 
-		ctx := context.WithValue(r.Context(), sck, sesValue)
+		ctx := context.WithValue(r.Context(), sckState, sesValue)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
