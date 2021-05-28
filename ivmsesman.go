@@ -231,7 +231,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		fmt.Printf("session interface sid: %v, value[key], value: %v\n", sid, sesValue)
 
 		ctx := context.WithValue(r.Context(), sckState, sesValue)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.Clone(ctx))
 	})
 }
 
