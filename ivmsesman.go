@@ -225,10 +225,9 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		}
 
 		sid := session.SessionID()
-		fmt.Printf("session interface sid: %v\n", sid)
-
 		sesValue := session.Get("state").(string)
-		fmt.Printf("session interface sid: %v, value[key], value: %v\n", sid, sesValue)
+		r.Header.Set("X-Session-State", sesValue)
+		r.Header.Set("X-Session-ID", sid)
 
 		ctx := context.WithValue(r.Context(), sckState, sesValue)
 		next.ServeHTTP(w, r.Clone(ctx))
