@@ -120,6 +120,9 @@ func (pder *SessionStoreProvider) Destroy(sid string) error {
 // SessionGC cleans all expired sessions
 func (pder *SessionStoreProvider) SessionGC(maxlifetime int64) {
 
+	if maxlifetime == 0 {
+		maxlifetime = 3600
+	}
 	iter := pder.client.Collection(pder.collection).Where("TimeAccessed", "<", (time.Now().Unix() - maxlifetime)).Documents(context.TODO())
 
 	var erritr error

@@ -284,6 +284,7 @@ func (sm *Sesman) GC() {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
+	// TODO: find a way to prevent app crashing with panic
 	sm.sessions.SessionGC(sm.cfg.Maxlifetime)
 	time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
 }
