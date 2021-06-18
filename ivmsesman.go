@@ -303,5 +303,29 @@ func (sm *Sesman) Exists(w http.ResponseWriter, r *http.Request) (bool, error) {
 	return sm.sessions.Exists(cookie.Value), nil
 }
 
+//
+func (sm *Sesman) ChangeState(w http.ResponseWriter, r *http.Request) (bool, error) {
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		return false, ErrUnknownSessionID
+	}
+
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	ss, err := sm.sessions.FindOrCreate(cookie.Value)
+	if err != nil {
+		return false, ErrUnknownSessionID
+	}
+
+	var stateVal = r.Header.Get("X-Session-State")
+	ss.Set("state", stateVal)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 // ErrUnknownSessionID  will be returned when a session id is required for a operation but it is missing or wrong value
 var ErrUnknownSessionID = errors.New("unknown session id")
