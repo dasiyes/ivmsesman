@@ -92,7 +92,7 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionSto
 			return nil, errors.New("insufficient permissions to read data from the session store")
 		} else {
 			if docses == nil {
-				fmt.Printf("sid: %v was not found in the session store. A new session will be created", sid)
+				fmt.Printf("sid: %v was not found in the session store. A new session will be created. Error: %v\n", sid, err)
 				return pder.NewSession(sid)
 			}
 			return nil, fmt.Errorf("err while read session id: %v, err: %v", sid, err)
@@ -189,7 +189,7 @@ func (pder *SessionStoreProvider) ActiveSessions() int {
 func (pder *SessionStoreProvider) Exists(sid string) bool {
 
 	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
-	if err != nil || !docses.Exists() {
+	if err != nil || docses == nil {
 		return false
 	}
 	return true
