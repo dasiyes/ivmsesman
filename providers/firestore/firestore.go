@@ -160,6 +160,21 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 	return nil
 }
 
+// UpdateSessionState will update the state value with one provided
+func (pder *SessionStoreProvider) UpdateSessionState(sid string, state string) error {
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.state",
+				Value: state,
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating `Value.state` for sessions id %v, err: %v", sid, err)
+	}
+	return nil
+}
+
 // ActiveSessions returns the number of currently active sessions in the session store
 func (pder *SessionStoreProvider) ActiveSessions() int {
 

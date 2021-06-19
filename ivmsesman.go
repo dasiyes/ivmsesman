@@ -2,7 +2,6 @@
 package ivmsesman
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -63,9 +62,8 @@ func (ssp ssProvider) String() string {
 var providers = make(map[string]SessionRepository)
 
 // Custom key for session obj in the request context
-type SessionCtxKey string
-
-var sckState SessionCtxKey = "sessionState"
+//type SessionCtxKey string
+//var sckState SessionCtxKey = "sessionState"
 
 // NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
@@ -105,6 +103,9 @@ type SessionRepository interface {
 
 	// UpdateTimeAccessed will refresh the time when the session has been last time accessed
 	UpdateTimeAccessed(sid string) error
+
+	// UpdateSessionState will update the state value with one provided
+	UpdateSessionState(sid string, state string) error
 
 	// Flush will delete all data
 	Flush() error
@@ -227,10 +228,11 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		sid := session.SessionID()
 		sesValue := session.Get("state").(string)
 		r.Header.Set("X-Session-State", sesValue)
-		r.Header.Set("X-Session-ID", sid)
+		//r.Header.Set("X-Session-ID", sid)
+		_ = sid
 
-		ctx := context.WithValue(r.Context(), sckState, sesValue)
-		next.ServeHTTP(w, r.Clone(ctx))
+		// ctx := context.WithValue(r.Context(), sckState, sesValue)
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -303,27 +305,28 @@ func (sm *Sesman) Exists(w http.ResponseWriter, r *http.Request) (bool, error) {
 	return sm.sessions.Exists(cookie.Value), nil
 }
 
-//
+// Change state will be using the custom request header X-Session-State to handle the state defined by other services like API gateway and auth-service
 func (sm *Sesman) ChangeState(w http.ResponseWriter, r *http.Request) (bool, error) {
+
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 	if err != nil || cookie.Value == "" {
 		return false, ErrUnknownSessionID
 	}
 
+	var stateVal = r.Header.Get("X-Session-State")
+	if stateVal == "" {
+		return false, fmt.Errorf("missing not empty value for the new state in the request custome header x-session-state")
+	}
+
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	ss, err := sm.sessions.FindOrCreate(cookie.Value)
-	if err != nil {
-		return false, ErrUnknownSessionID
-	}
-
-	var stateVal = r.Header.Get("X-Session-State")
-	ss.Set("state", stateVal)
+	err = sm.sessions.UpdateSessionState(cookie.Value, stateVal)
 	if err != nil {
 		return false, err
 	}
 
+	fmt.Printf("Session id %v state MSUT be changed to %v\n", cookie.Value, stateVal)
 	return true, nil
 }
 

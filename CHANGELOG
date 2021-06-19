@@ -1,3 +1,8 @@
+v0.4.0  
+        - implements session state update method for Firestore vendor
+v0.3.0
+        - implements Manager as middleware for the libarary
+        
 v0.2.0  implementing Firestore as session store provider
 
 v0.1.7  change in SesCfg - visit cookie name added

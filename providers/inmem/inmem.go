@@ -133,6 +133,12 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 	return nil
 }
 
+// UpdateSessionState will update the state value with one provided
+func (pder *SessionStoreProvider) UpdateSessionState(sid string, state string) error {
+	// TODO: make the function work for the inmem provider
+	return nil
+}
+
 // ActiveSessions returns the number of currently active sessions in the session store
 func (pder *SessionStoreProvider) ActiveSessions() int {
 
