@@ -91,10 +91,10 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionSto
 		if strings.Contains(err.Error(), "Missing or insufficient permissions") {
 			return nil, errors.New("insufficient permissions to read data from the session store")
 		} else {
-			// if !docses.Exists() {
-			// 	fmt.Printf("sid: %v was not found in the session store. A new session will be created", sid)
-			// 	return pder.NewSession(sid)
-			// }
+			if docses == nil {
+				fmt.Printf("sid: %v was not found in the session store. A new session will be created", sid)
+				return pder.NewSession(sid)
+			}
 			return nil, fmt.Errorf("err while read session id: %v, err: %v", sid, err)
 		}
 	}
