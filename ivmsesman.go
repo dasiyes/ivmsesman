@@ -73,7 +73,7 @@ func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 	if !ok {
 		return nil, fmt.Errorf("Sesman: unknown session store type %q ", ssProvider.String())
 	}
-	if cfg == nil || cfg.CookieName == "" {
+	if cfg == nil || cfg.CookieName == "" || cfg.ProjectID == "" {
 		return nil, fmt.Errorf("Sesman: Missing or invalid Session Manager Configuration")
 	}
 	return &Sesman{sessions: provider, cfg: cfg}, nil

@@ -220,9 +220,9 @@ func (pder *SessionStoreProvider) Flush() error {
 
 func init() {
 	// Initialize the GCP project to be used
-	projectID := os.Getenv("PROJECT_ID")
+	projectID := os.Getenv("FIRESTORE_PROJECT_ID")
 	client, err := firestore.NewClient(context.TODO(), projectID)
-	if err != nil {
+	if err != nil || projectID == "" {
 		fmt.Printf("FATAL: firestore client init error %v", err.Error())
 		os.Exit(1)
 	}
