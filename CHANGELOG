@@ -1,3 +1,5 @@
+v0.4.1
+        - some more logging lines added. Purpose is to monitor the existing sessions state.
 v0.4.0  
         - implements session state update method for Firestore vendor
 v0.3.0

@@ -174,6 +174,8 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 	if (err != nil && err == http.ErrNoCookie) || cookie.Value == "" {
 
 		sid := sm.sessionID()
+
+		// TODO: remove after debug
 		fmt.Printf("[SessionStart-1] generated sid: %v\n", sid)
 
 		session, err = sm.sessions.NewSession(sid)
@@ -181,6 +183,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 			return nil, fmt.Errorf("error creating a new session: %v", err)
 		}
 
+		// TODO: remove after debug
 		fmt.Printf("[SessionStart-2] session ID: %v\n", session.SessionID())
 
 		cookie := http.Cookie{
@@ -220,7 +223,8 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 
 		session, err := sm.SessionStart(w, r)
 		if err != nil || session == nil {
-			fmt.Printf("dropping the request due to session management error: %v\n", err)
+			w.Header().Set("Connection", "close")
+			fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -228,10 +232,11 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		sid := session.SessionID()
 		sesValue := session.Get("state").(string)
 		r.Header.Set("X-Session-State", sesValue)
-		//r.Header.Set("X-Session-ID", sid)
+
+		// TODO: remove after debug
+		fmt.Printf("[mw Manager] session id [%v], with session state [%v] found in the request\n", sid, sesValue)
 		_ = sid
 
-		// ctx := context.WithValue(r.Context(), sckState, sesValue)
 		next.ServeHTTP(w, r)
 	})
 }

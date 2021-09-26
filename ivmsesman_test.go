@@ -9,8 +9,10 @@ import (
 
 // Creates new Session Configuration
 var cfg *SesCfg = &SesCfg{
-	CookieName:  "ivmid",
-	Maxlifetime: 3600,
+	CookieName:      "ivmid",
+	Maxlifetime:     3600,
+	VisitCookieName: "iv",
+	ProjectID:       "ivmauth",
 }
 
 var gsm *Sesman
