@@ -249,6 +249,11 @@ func (sm *Sesman) ActiveSessions() int {
 	return sm.sessions.ActiveSessions()
 }
 
+// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+func (sm *Sesman) UpdateCodeVerifier(sid, cove string) error {
+	return sm.sessions.UpdateCodeVerifier(sid, cove)
+}
+
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.
 // TODO: Consider if there will be use-case for this to be implemented...
 // func (sm *Sesman) GetLastAccessedAt() int64 {
