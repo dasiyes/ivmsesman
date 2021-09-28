@@ -1,3 +1,7 @@
+v0.4.3
+        - New method in SessionRepository interface - UpdateCodeVerifier()
+v0.4.2
+        - update of ksuid package to v1.0.4
 v0.4.1
         - some more logging lines added. Purpose is to monitor the existing sessions state.
 v0.4.0  

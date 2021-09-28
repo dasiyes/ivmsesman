@@ -175,6 +175,21 @@ func (pder *SessionStoreProvider) UpdateSessionState(sid string, state string) e
 	return nil
 }
 
+// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.code_verifier",
+				Value: cove,
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating `Value.code_verifier` for sessions id %v, err: %v", sid, err)
+	}
+	return nil
+}
+
 // ActiveSessions returns the number of currently active sessions in the session store
 func (pder *SessionStoreProvider) ActiveSessions() int {
 

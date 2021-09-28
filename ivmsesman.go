@@ -107,6 +107,9 @@ type SessionRepository interface {
 	// UpdateSessionState will update the state value with one provided
 	UpdateSessionState(sid string, state string) error
 
+	// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+	UpdateCodeVerifier(sid, cove string) error
+
 	// Flush will delete all data
 	Flush() error
 }
