@@ -110,6 +110,9 @@ type SessionRepository interface {
 	// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
 	UpdateCodeVerifier(sid, cove string) error
 
+	// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
+	SaveCodeChallengeAndMethod(sid, coch, mth string) error
+
 	// Flush will delete all data
 	Flush() error
 }
@@ -252,6 +255,11 @@ func (sm *Sesman) ActiveSessions() int {
 // UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
 func (sm *Sesman) UpdateCodeVerifier(sid, cove string) error {
 	return sm.sessions.UpdateCodeVerifier(sid, cove)
+}
+
+// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
+func (sm *Sesman) SaveCodeChallengeAndMethod(sid, coch, mth string) error {
+	return sm.sessions.SaveCodeChallengeAndMethod(sid, coch, mth)
 }
 
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.

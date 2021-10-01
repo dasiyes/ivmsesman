@@ -190,6 +190,25 @@ func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
 	return nil
 }
 
+// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
+func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth string) error {
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.code_challenger",
+				Value: coch,
+			},
+			{
+				Path:  "Value.code_challenger_method",
+				Value: mth,
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating `Value.code_verifier` for sessions id %v, err: %v", sid, err)
+	}
+	return nil
+}
+
 // ActiveSessions returns the number of currently active sessions in the session store
 func (pder *SessionStoreProvider) ActiveSessions() int {
 
