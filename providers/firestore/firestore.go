@@ -191,7 +191,7 @@ func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
 }
 
 // SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
-func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth string) error {
+func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
 		[]firestore.Update{
 			{
@@ -201,6 +201,10 @@ func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth stri
 			{
 				Path:  "Value.code_challenger_method",
 				Value: mth,
+			},
+			{
+				Path:  "Value.auth_code",
+				Value: code,
 			},
 		})
 	if err != nil {

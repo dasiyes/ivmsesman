@@ -1,5 +1,7 @@
+v0.4.6
+        - auth code value added to the  SaveCodeChallengeAndMethod() method
 v0.4.5
-        - - New method in SessionRepository interface - SaveCodeChallengeAndMethod()
+        - New method in SessionRepository interface - SaveCodeChallengeAndMethod()
 v0.4.4
         - Fix in the implemented new method in v0.4.3
 v0.4.3

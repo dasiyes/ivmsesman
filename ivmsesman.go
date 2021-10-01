@@ -111,7 +111,7 @@ type SessionRepository interface {
 	UpdateCodeVerifier(sid, cove string) error
 
 	// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
-	SaveCodeChallengeAndMethod(sid, coch, mth string) error
+	SaveCodeChallengeAndMethod(sid, coch, mth, code string) error
 
 	// Flush will delete all data
 	Flush() error
@@ -258,8 +258,8 @@ func (sm *Sesman) UpdateCodeVerifier(sid, cove string) error {
 }
 
 // SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
-func (sm *Sesman) SaveCodeChallengeAndMethod(sid, coch, mth string) error {
-	return sm.sessions.SaveCodeChallengeAndMethod(sid, coch, mth)
+func (sm *Sesman) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
+	return sm.sessions.SaveCodeChallengeAndMethod(sid, coch, mth, code)
 }
 
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.
