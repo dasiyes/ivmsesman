@@ -206,6 +206,10 @@ func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, cod
 				Path:  "Value.auth_code",
 				Value: code,
 			},
+			{
+				Path:  "Value.state",
+				Value: "InAuth",
+			},
 		})
 	if err != nil {
 		return fmt.Errorf("err while updating `Value.code_verifier` for sessions id %v, err: %v", sid, err)
