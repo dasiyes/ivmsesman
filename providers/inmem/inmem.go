@@ -171,6 +171,24 @@ func (pder *SessionStoreProvider) Flush() error {
 	return nil
 }
 
+// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
+	// TODO [dev]: implement
+	return nil
+}
+
+// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
+func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
+	// TODO [dev]: implement
+	return nil
+}
+
+// GetAuthCode will return the authorization code for a session, if it is InAuth
+func (pder *SessionStoreProvider) GetAuthCode(sid string) string {
+	// TODO [dev]: implement
+	return ""
+}
+
 func init() {
 	pder.sessions = make(map[string]*list.Element)
 	ivmsesman.RegisterProvider(ivmsesman.Memory, pder)

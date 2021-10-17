@@ -115,6 +115,9 @@ type SessionRepository interface {
 
 	// Flush will delete all data
 	Flush() error
+
+	// GetSessionAuthCode will return the authorization code for a session, if it is InAuth
+	GetAuthCode(sid string) string
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -260,6 +263,11 @@ func (sm *Sesman) UpdateCodeVerifier(sid, cove string) error {
 // SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
 func (sm *Sesman) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
 	return sm.sessions.SaveCodeChallengeAndMethod(sid, coch, mth, code)
+}
+
+// GetSessionAuthCode will return the authorization code for a session, if it is InAuth
+func (sm *Sesman) GetAuthCode(sid string) string {
+	return sm.sessions.GetAuthCode(sid)
 }
 
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.
