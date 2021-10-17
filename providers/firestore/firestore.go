@@ -226,7 +226,7 @@ func (pder *SessionStoreProvider) GetAuthCode(sid string) string {
 	}
 
 	var ss SessionStore = SessionStore{}
-	err := docses.DataTo(&ss)
+	err = docses.DataTo(&ss)
 	if err != nil {
 		return ""
 	}
