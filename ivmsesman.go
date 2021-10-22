@@ -116,7 +116,7 @@ type SessionRepository interface {
 	// Flush will delete all data
 	Flush() error
 
-	// GetSessionAuthCode will return the authorization code for a session, if it is InAuth
+	// GetSessionAuthCode will return the authorization code for a session, if it is InAuth and the code did not expire.
 	GetAuthCode(sid string) string
 }
 

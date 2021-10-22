@@ -192,6 +192,10 @@ func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
 
 // SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
 func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
+
+	// set code expiration timestamp
+	ce := time.Now().Unix() + 60
+
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
 		[]firestore.Update{
 			{
@@ -207,6 +211,10 @@ func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, cod
 				Value: code,
 			},
 			{
+				Path:  "Value.code_expire",
+				Value: ce,
+			},
+			{
 				Path:  "Value.state",
 				Value: "InAuth",
 			},
@@ -220,6 +228,8 @@ func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, cod
 // GetAuthCode will return the authorization code for a session, if it is InAuth
 func (pder *SessionStoreProvider) GetAuthCode(sid string) string {
 
+	now := time.Now().Unix()
+
 	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
 	if err != nil || docses == nil {
 		return ""
@@ -231,7 +241,7 @@ func (pder *SessionStoreProvider) GetAuthCode(sid string) string {
 		return ""
 	}
 	var value = ss.Value
-	if value["state"].(string) == "InAuth" {
+	if value["state"].(string) == "InAuth" && value["code_expire"].(float64) > float64(now) {
 		return value["auth_code"].(string)
 	}
 	return ""
