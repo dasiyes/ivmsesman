@@ -117,7 +117,7 @@ type SessionRepository interface {
 	Flush() error
 
 	// GetSessionAuthCode will return the authorization code for a session, if it is InAuth and the code did not expire.
-	GetAuthCode(sid string) string
+	GetAuthCode(sid string) map[string]string
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -266,7 +266,7 @@ func (sm *Sesman) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error 
 }
 
 // GetSessionAuthCode will return the authorization code for a session, if it is InAuth
-func (sm *Sesman) GetAuthCode(sid string) string {
+func (sm *Sesman) GetAuthCode(sid string) map[string]string {
 	return sm.sessions.GetAuthCode(sid)
 }
 

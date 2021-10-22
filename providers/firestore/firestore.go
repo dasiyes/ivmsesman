@@ -226,25 +226,29 @@ func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, cod
 }
 
 // GetAuthCode will return the authorization code for a session, if it is InAuth
-func (pder *SessionStoreProvider) GetAuthCode(sid string) string {
+func (pder *SessionStoreProvider) GetAuthCode(sid string) map[string]string {
 
 	now := time.Now().Unix()
+	var ac map[string]string = map[string]string{}
 
 	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
 	if err != nil || docses == nil {
-		return ""
+		return ac
 	}
 
 	var ss SessionStore = SessionStore{}
 	err = docses.DataTo(&ss)
 	if err != nil {
-		return ""
+		return ac
 	}
 	var value = ss.Value
 	if value["state"].(string) == "InAuth" && value["code_expire"].(float64) > float64(now) {
-		return value["auth_code"].(string)
+
+		ac["auth_code"] = value["auth_code"].(string)
+		ac["code_challenger"] = value["code_challenger"].(string)
+		ac["code_challenger_method"] = value["code_challenger_method"].(string)
 	}
-	return ""
+	return ac
 }
 
 // ActiveSessions returns the number of currently active sessions in the session store
