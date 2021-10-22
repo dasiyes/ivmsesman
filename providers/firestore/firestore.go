@@ -242,7 +242,7 @@ func (pder *SessionStoreProvider) GetAuthCode(sid string) map[string]string {
 		return ac
 	}
 	var value = ss.Value
-	if value["state"].(string) == "InAuth" && value["code_expire"].(float64) > float64(now) {
+	if value["state"].(string) == "InAuth" && value["code_expire"].(int64) > now {
 
 		ac["auth_code"] = value["auth_code"].(string)
 		ac["code_challenger"] = value["code_challenger"].(string)
