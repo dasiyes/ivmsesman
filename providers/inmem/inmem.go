@@ -86,7 +86,7 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionSto
 }
 
 // Destroy will remove a session data from the storage
-func (pder *SessionStoreProvider) Destroy(sid string) error {
+func (pder *SessionStoreProvider) DestroySID(sid string) error {
 
 	if element, ok := pder.sessions[sid]; ok {
 		delete(pder.sessions, sid)
@@ -178,17 +178,22 @@ func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
 }
 
 // SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
-func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
+func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(
+	sid, coch, mth, code, ru string) error {
 	// TODO [dev]: implement
 	return nil
 }
 
 // GetAuthCode will return the authorization code for a session, if it is InAuth
-func (pder *SessionStoreProvider) GetAuthCode(sid string) string {
+func (pder *SessionStoreProvider) GetAuthCode(sid string) map[string]string {
 	// TODO [dev]: implement
-	return ""
+	return nil
 }
 
+func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt string) error {
+
+	return nil
+}
 func init() {
 	pder.sessions = make(map[string]*list.Element)
 	ivmsesman.RegisterProvider(ivmsesman.Memory, pder)
