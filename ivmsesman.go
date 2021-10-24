@@ -244,7 +244,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		sesStateValue := session.Get("state").(string)
 		r.Header.Set("X-Session-State", sesStateValue)
 		if sesStateValue == "Authed" {
-			r.Header.Set("Authorization", session.Get("at").(string))
+			r.Header.Set("Authorization", "Bearer "+session.Get("at").(string))
 		}
 
 		// TODO: remove after debug
