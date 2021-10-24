@@ -108,7 +108,7 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionSto
 }
 
 // Destroy will remove a session data from the storage
-func (pder *SessionStoreProvider) Destroy(sid string) error {
+func (pder *SessionStoreProvider) DestroySID(sid string) error {
 
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Delete(context.TODO())
 	if err != nil {
@@ -307,6 +307,30 @@ func (pder *SessionStoreProvider) Flush() error {
 		}
 	}
 	return erritr
+}
+
+// UpdateAuthSession - update state, access and refresh tokens values for auth session
+func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt string) error {
+
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.at",
+				Value: at,
+			},
+			{
+				Path:  "Value.rt",
+				Value: rt,
+			},
+			{
+				Path:  "Value.state",
+				Value: "Authed",
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating new authenticated session id %v, err: %v", sid, err)
+	}
+	return nil
 }
 
 func init() {

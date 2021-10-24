@@ -96,7 +96,7 @@ type SessionRepository interface {
 	ActiveSessions() int
 
 	// Destroy will delete a session from the repository
-	Destroy(sid string) error
+	DestroySID(sid string) error
 
 	// SessionGC will clean the expired sessions
 	SessionGC(maxLifeTime int64)
@@ -118,6 +118,9 @@ type SessionRepository interface {
 
 	// GetSessionAuthCode will return the authorization code for a session, if it is InAuth and the code did not expire.
 	GetAuthCode(sid string) map[string]string
+
+	// UpdateAuthSession - update state, access and refresh tokens values for auth session
+	UpdateAuthSession(sid, at, rt string) error
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -287,7 +290,7 @@ func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	sm.sessions.Destroy(cookie.Value)
+	sm.sessions.DestroySID(cookie.Value)
 	expiration := time.Now()
 
 	cookie = &http.Cookie{
@@ -359,5 +362,53 @@ func (sm *Sesman) ChangeState(w http.ResponseWriter, r *http.Request) (bool, err
 	return true, nil
 }
 
+// SessionAuth changes an existing session in state "InAuth" to a new id and state "Authed"
+func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt string) error {
+
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		return ErrUnknownSessionID
+	}
+
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	if !sm.sessions.Exists(cookie.Value) {
+		return ErrInvalidSessionID
+	}
+
+	err = sm.sessions.DestroySID(cookie.Value)
+	if err != nil {
+		return fmt.Errorf("error distroying the old `InAuth` session: %s", err.Error())
+	}
+
+	nsid := sm.sessionID()
+	_, err = sm.sessions.NewSession(nsid)
+	if err != nil {
+		return fmt.Errorf("error creating Authed session: %s", err.Error())
+	}
+
+	err = sm.sessions.UpdateAuthSession(nsid, at, rt)
+	if err != nil {
+		return fmt.Errorf("error updating Authed session: %s", err.Error())
+	}
+
+	nsCookie := http.Cookie{
+		Name:     sm.cfg.CookieName,
+		Value:    url.QueryEscape(nsid),
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   int(sm.cfg.Maxlifetime)}
+
+	http.SetCookie(w, &nsCookie)
+
+	return nil
+}
+
 // ErrUnknownSessionID  will be returned when a session id is required for a operation but it is missing or wrong value
 var ErrUnknownSessionID = errors.New("unknown session id")
+
+// ErrInvalidSessionID  will be returned when a session id is required for a operation but it does not exists.
+var ErrInvalidSessionID = errors.New("invalid session id")
