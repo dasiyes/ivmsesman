@@ -191,7 +191,8 @@ func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
 }
 
 // SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
-func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
+func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(
+	sid, coch, mth, code, ru string) error {
 
 	// set code expiration timestamp
 	ce := time.Now().Unix() + 60
@@ -213,6 +214,10 @@ func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(sid, coch, mth, cod
 			{
 				Path:  "Value.code_expire",
 				Value: ce,
+			},
+			{
+				Path:  "Value.redirect_uri",
+				Value: ru,
 			},
 			{
 				Path:  "Value.state",

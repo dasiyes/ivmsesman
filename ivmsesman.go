@@ -111,7 +111,7 @@ type SessionRepository interface {
 	UpdateCodeVerifier(sid, cove string) error
 
 	// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
-	SaveCodeChallengeAndMethod(sid, coch, mth, code string) error
+	SaveCodeChallengeAndMethod(sid, coch, mth, code, ru string) error
 
 	// Flush will delete all data
 	Flush() error
@@ -263,9 +263,9 @@ func (sm *Sesman) UpdateCodeVerifier(sid, cove string) error {
 	return sm.sessions.UpdateCodeVerifier(sid, cove)
 }
 
-// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
-func (sm *Sesman) SaveCodeChallengeAndMethod(sid, coch, mth, code string) error {
-	return sm.sessions.SaveCodeChallengeAndMethod(sid, coch, mth, code)
+// SaveACA - at step2 of AuthorizationCode flow save Athorization Code Attributes
+func (sm *Sesman) SaveACA(sid, coch, mth, code, ru string) error {
+	return sm.sessions.SaveCodeChallengeAndMethod(sid, coch, mth, code, ru)
 }
 
 // GetSessionAuthCode will return the authorization code for a session, if it is InAuth
