@@ -241,13 +241,15 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			return
 		}
 
-		sid := session.SessionID()
-		sesValue := session.Get("state").(string)
-		r.Header.Set("X-Session-State", sesValue)
+		sesStateValue := session.Get("state").(string)
+		r.Header.Set("X-Session-State", sesStateValue)
+		if sesStateValue == "Authed" {
+			r.Header.Set("Authorization", session.Get("at").(string))
+		}
 
 		// TODO: remove after debug
-		fmt.Printf("[mw Manager] session id [%v], with session state [%v] found in the request\n", sid, sesValue)
-		_ = sid
+		sid := session.SessionID()
+		fmt.Printf("[mw Manager] session id [%v], with session state [%v] found in the request\n", sid, sesStateValue)
 
 		next.ServeHTTP(w, r)
 	})
