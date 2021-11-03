@@ -2,6 +2,7 @@
 package ivmsesman
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +12,12 @@ import (
 
 	"github.com/segmentio/ksuid"
 )
+
+// Key to use when setting the request ID.
+type ctxKeySessionObj int
+
+// RequestIDKey is the key that holds the unique request ID in a request context.
+const SessionObjKey ctxKeySessionObj = 0
 
 //
 // TODO: Review the session manager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
@@ -225,7 +232,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 	return session, nil
 }
 
-// Manager - Middleware to work with Session manager
+// Manager - Middleware to work as Session manager
 func (sm *Sesman) Manager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -243,15 +250,14 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 
 		sesStateValue := session.Get("state").(string)
 		r.Header.Set("X-Session-State", sesStateValue)
-		if sesStateValue == "Authed" {
-			r.Header.Set("Authorization", "Bearer "+session.Get("at").(string))
-		}
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, SessionObjKey, session)
 
 		// TODO: remove after debug
 		sid := session.SessionID()
-		fmt.Printf("[mw Manager] session id [%v], with session state [%v] found in the request\n", sid, sesStateValue)
+		fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", r.Header.Get("X-Request-Id"), sid, sesStateValue)
 
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
