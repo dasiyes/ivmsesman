@@ -254,7 +254,16 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		r.Header.Set("X-Session-State", sesStateValue)
 
 		ctx := r.Context()
-		var rid = ctx.Value(RequestIDKey).(string)
+		var (
+			rid string
+			ok  bool
+		)
+		if v := ctx.Value(RequestIDKey); v != nil {
+			rid, ok = v.(string)
+			if !ok {
+				fmt.Printf("Error converting context value [%#v]", v)
+			}
+		}
 
 		ctx = context.WithValue(ctx, SessionObjKey, session)
 
