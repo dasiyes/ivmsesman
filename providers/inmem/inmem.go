@@ -15,18 +15,18 @@ var pder = &SessionStoreProvider{list: list.New()}
 type SessionStore struct {
 	sid          string
 	timeAccessed int64
-	value        map[string]interface{}
+	value        map[interface{}]interface{}
 }
 
 // Set stores the key:value pair in the repository
-func (st *SessionStore) Set(key string, value interface{}) error {
+func (st *SessionStore) Set(key, value interface{}) error {
 	st.value[key] = value
 	pder.UpdateTimeAccessed(st.sid)
 	return nil
 }
 
 // Get will retrieve the session value by the provided key
-func (st *SessionStore) Get(key string) interface{} {
+func (st *SessionStore) Get(key interface{}) interface{} {
 	_ = pder.UpdateTimeAccessed(st.sid)
 	if v, ok := st.value[key]; ok {
 		return v
@@ -35,7 +35,7 @@ func (st *SessionStore) Get(key string) interface{} {
 }
 
 // Delete will remove a session value by the provided key
-func (st *SessionStore) Delete(key string) error {
+func (st *SessionStore) Delete(key interface{}) error {
 	delete(st.value, key)
 	pder.UpdateTimeAccessed(st.sid)
 	return nil
@@ -59,21 +59,21 @@ type SessionStoreProvider struct {
 }
 
 // NewSession creates a new session value in the store with sid as a key
-func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.SessionStore, error) {
 
 	pder.lock.Lock()
 	defer pder.lock.Unlock()
 
-	v := make(map[string]interface{})
+	v := make(map[interface{}]interface{})
 	v["state"] = "new"
 	newsess := SessionStore{sid: sid, timeAccessed: time.Now().Unix(), value: v}
-	element := pder.list.PushBack(newsess)
+	element := pder.list.PushBack(&newsess)
 	pder.sessions[sid] = element
 	return &newsess, nil
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
-func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionStore, error) {
 
 	if element, ok := pder.sessions[sid]; ok {
 		sesel := element.Value.(*SessionStore)
@@ -86,7 +86,7 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, err
 }
 
 // Destroy will remove a session data from the storage
-func (pder *SessionStoreProvider) Destroy(sid string) error {
+func (pder *SessionStoreProvider) DestroySID(sid string) error {
 
 	if element, ok := pder.sessions[sid]; ok {
 		delete(pder.sessions, sid)
@@ -133,6 +133,12 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 	return nil
 }
 
+// UpdateSessionState will update the state value with one provided
+func (pder *SessionStoreProvider) UpdateSessionState(sid string, state string) error {
+	// TODO: make the function work for the inmem provider
+	return nil
+}
+
 // ActiveSessions returns the number of currently active sessions in the session store
 func (pder *SessionStoreProvider) ActiveSessions() int {
 
@@ -165,6 +171,29 @@ func (pder *SessionStoreProvider) Flush() error {
 	return nil
 }
 
+// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
+	// TODO [dev]: implement
+	return nil
+}
+
+// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
+func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(
+	sid, coch, mth, code, ru string) error {
+	// TODO [dev]: implement
+	return nil
+}
+
+// GetAuthCode will return the authorization code for a session, if it is InAuth
+func (pder *SessionStoreProvider) GetAuthCode(sid string) map[string]string {
+	// TODO [dev]: implement
+	return nil
+}
+
+func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt string) error {
+
+	return nil
+}
 func init() {
 	pder.sessions = make(map[string]*list.Element)
 	ivmsesman.RegisterProvider(ivmsesman.Memory, pder)

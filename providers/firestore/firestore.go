@@ -24,30 +24,31 @@ type SessionStore struct {
 }
 
 // Set stores the key:value pair in the repository
-func (st *SessionStore) Set(key string, value interface{}) error {
-	st.Value[key] = value
+func (st *SessionStore) Set(key, value interface{}) error {
+	st.Value[key.(string)] = value
 	pder.UpdateTimeAccessed(st.Sid)
 	return nil
 }
 
 // Get will retrieve the session value by the provided key
-func (st *SessionStore) Get(key string) interface{} {
+func (st *SessionStore) Get(key interface{}) interface{} {
 	_ = pder.UpdateTimeAccessed(st.Sid)
-	if v, ok := st.Value[key]; ok {
+	if v, ok := st.Value[key.(string)]; ok {
 		return v
 	}
 	return nil
 }
 
 // Delete will remove a session value by the provided key
-func (st *SessionStore) Delete(key string) error {
-	delete(st.Value, key)
+func (st *SessionStore) Delete(key interface{}) error {
+	delete(st.Value, key.(string))
 	pder.UpdateTimeAccessed(st.Sid)
 	return nil
 }
 
 // SessionID will retrieve the id of the current session
 func (st *SessionStore) SessionID() string {
+	fmt.Printf("Sid: %v", st.TimeAccessed)
 	return st.Sid
 }
 
@@ -60,10 +61,11 @@ func (st *SessionStore) GetLTA() time.Time {
 type SessionStoreProvider struct {
 	client     *firestore.Client
 	collection string
+	// sessions   map[string]interface{}
 }
 
 // NewSession creates a new session value in the store with sid as a key
-func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.SessionStore, error) {
 
 	v := make(map[string]interface{})
 	v["state"] = "New"
@@ -74,27 +76,30 @@ func (pder *SessionStoreProvider) NewSession(sid string) (ivmsesman.IvmSS, error
 	if err != nil {
 		return nil, fmt.Errorf("unable to save in session repository - error: %v", err)
 	}
+	// pder.sessions[sid] = newsess
+
 	return &newsess, nil
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
-func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, error) {
+func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.SessionStore, error) {
 
-	var ss SessionStore
+	var ss SessionStore = SessionStore{}
 
 	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
 	if err != nil {
 		if strings.Contains(err.Error(), "Missing or insufficient permissions") {
 			return nil, errors.New("insufficient permissions to read data from the session store")
 		} else {
-			if !docses.Exists() {
+			if docses == nil {
+				fmt.Printf("sid: %v was not found in the session store. A new session will be created. Error: %v\n", sid, err)
 				return pder.NewSession(sid)
 			}
 			return nil, fmt.Errorf("err while read session id: %v, err: %v", sid, err)
 		}
 	}
 
-	err = docses.DataTo(ss)
+	err = docses.DataTo(&ss)
 	if err != nil {
 		return nil, fmt.Errorf("error while converting firstore doc to session object: %v", err)
 	}
@@ -103,7 +108,7 @@ func (pder *SessionStoreProvider) FindOrCreate(sid string) (ivmsesman.IvmSS, err
 }
 
 // Destroy will remove a session data from the storage
-func (pder *SessionStoreProvider) Destroy(sid string) error {
+func (pder *SessionStoreProvider) DestroySID(sid string) error {
 
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Delete(context.TODO())
 	if err != nil {
@@ -115,6 +120,9 @@ func (pder *SessionStoreProvider) Destroy(sid string) error {
 // SessionGC cleans all expired sessions
 func (pder *SessionStoreProvider) SessionGC(maxlifetime int64) {
 
+	if maxlifetime == 0 {
+		maxlifetime = 3600
+	}
 	iter := pder.client.Collection(pder.collection).Where("TimeAccessed", "<", (time.Now().Unix() - maxlifetime)).Documents(context.TODO())
 
 	var erritr error
@@ -143,13 +151,109 @@ func (pder *SessionStoreProvider) UpdateTimeAccessed(sid string) error {
 		[]firestore.Update{
 			{
 				Path:  "TimeAccessed",
-				Value: firestore.ServerTimestamp,
+				Value: time.Now().Unix(),
 			},
 		})
 	if err != nil {
 		return fmt.Errorf("err while updating time accessed for sessions id %v, err: %v", sid, err)
 	}
 	return nil
+}
+
+// UpdateSessionState will update the state value with one provided
+func (pder *SessionStoreProvider) UpdateSessionState(sid string, state string) error {
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.state",
+				Value: state,
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating `Value.state` for sessions id %v, err: %v", sid, err)
+	}
+	return nil
+}
+
+// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+func (pder *SessionStoreProvider) UpdateCodeVerifier(sid, cove string) error {
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.code_verifier",
+				Value: cove,
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating `Value.code_verifier` for sessions id %v, err: %v", sid, err)
+	}
+	return nil
+}
+
+// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
+func (pder *SessionStoreProvider) SaveCodeChallengeAndMethod(
+	sid, coch, mth, code, ru string) error {
+
+	// set code expiration timestamp
+	ce := time.Now().Unix() + 60
+
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.code_challenger",
+				Value: coch,
+			},
+			{
+				Path:  "Value.code_challenger_method",
+				Value: mth,
+			},
+			{
+				Path:  "Value.auth_code",
+				Value: code,
+			},
+			{
+				Path:  "Value.code_expire",
+				Value: ce,
+			},
+			{
+				Path:  "Value.redirect_uri",
+				Value: ru,
+			},
+			{
+				Path:  "Value.state",
+				Value: "InAuth",
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating `Value.code_verifier` for sessions id %v, err: %v", sid, err)
+	}
+	return nil
+}
+
+// GetAuthCode will return the authorization code for a session, if it is InAuth
+func (pder *SessionStoreProvider) GetAuthCode(sid string) map[string]string {
+
+	now := time.Now().Unix()
+	var ac map[string]string = map[string]string{}
+
+	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
+	if err != nil || docses == nil {
+		return ac
+	}
+
+	var ss SessionStore = SessionStore{}
+	err = docses.DataTo(&ss)
+	if err != nil {
+		return ac
+	}
+	var value = ss.Value
+	if value["state"].(string) == "InAuth" && value["code_expire"].(int64) > now {
+
+		ac["auth_code"] = value["auth_code"].(string)
+		ac["code_challenger"] = value["code_challenger"].(string)
+		ac["code_challenger_method"] = value["code_challenger_method"].(string)
+	}
+	return ac
 }
 
 // ActiveSessions returns the number of currently active sessions in the session store
@@ -181,7 +285,7 @@ func (pder *SessionStoreProvider) ActiveSessions() int {
 func (pder *SessionStoreProvider) Exists(sid string) bool {
 
 	docses, err := pder.client.Collection(pder.collection).Doc(sid).Get(context.TODO())
-	if err != nil || !docses.Exists() {
+	if err != nil || docses == nil {
 		return false
 	}
 	return true
@@ -210,11 +314,35 @@ func (pder *SessionStoreProvider) Flush() error {
 	return erritr
 }
 
+// UpdateAuthSession - update state, access and refresh tokens values for auth session
+func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt string) error {
+
+	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
+		[]firestore.Update{
+			{
+				Path:  "Value.at",
+				Value: at,
+			},
+			{
+				Path:  "Value.rt",
+				Value: rt,
+			},
+			{
+				Path:  "Value.state",
+				Value: "Authed",
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("err while updating new authenticated session id %v, err: %v", sid, err)
+	}
+	return nil
+}
+
 func init() {
 	// Initialize the GCP project to be used
-	projectID := os.Getenv("PROJECT_ID")
+	projectID := os.Getenv("FIRESTORE_PROJECT_ID")
 	client, err := firestore.NewClient(context.TODO(), projectID)
-	if err != nil {
+	if err != nil || projectID == "" {
 		fmt.Printf("FATAL: firestore client init error %v", err.Error())
 		os.Exit(1)
 	}

@@ -2,7 +2,6 @@
 package ivmsesman
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -63,9 +62,8 @@ func (ssp ssProvider) String() string {
 var providers = make(map[string]SessionRepository)
 
 // Custom key for session obj in the request context
-type SessionCtxKey int
-
-var sck SessionCtxKey = 0
+//type SessionCtxKey string
+//var sckState SessionCtxKey = "sessionState"
 
 // NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
@@ -73,7 +71,7 @@ func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 	if !ok {
 		return nil, fmt.Errorf("Sesman: unknown session store type %q ", ssProvider.String())
 	}
-	if cfg == nil || cfg.CookieName == "" {
+	if cfg == nil || cfg.CookieName == "" || cfg.ProjectID == "" {
 		return nil, fmt.Errorf("Sesman: Missing or invalid Session Manager Configuration")
 	}
 	return &Sesman{sessions: provider, cfg: cfg}, nil
@@ -82,23 +80,23 @@ func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 // SessionRepository interface for the session storage
 type SessionRepository interface {
 	// NewSession will initiate a new session and return its object
-	NewSession(sid string) (IvmSS, error)
+	NewSession(sid string) (SessionStore, error)
 
 	// FindOrCreate will search the repository for a session id and if not found will create a new one with the given id
-	FindOrCreate(sid string) (IvmSS, error)
+	FindOrCreate(sid string) (SessionStore, error)
 
 	//Exists will check the session storage for a session id
 	Exists(sid string) bool
 
 	// FindAll will return slice of all active sessions
 	// TODO: FindAll could be expensive. Think if there is a real use-case about it
-	// FindAll() []*IvmSS
+	// FindAll() []*SessionStore
 
 	//ActiveSessions will return the number of the active sessions in the session store
 	ActiveSessions() int
 
 	// Destroy will delete a session from the repository
-	Destroy(sid string) error
+	DestroySID(sid string) error
 
 	// SessionGC will clean the expired sessions
 	SessionGC(maxLifeTime int64)
@@ -106,21 +104,36 @@ type SessionRepository interface {
 	// UpdateTimeAccessed will refresh the time when the session has been last time accessed
 	UpdateTimeAccessed(sid string) error
 
+	// UpdateSessionState will update the state value with one provided
+	UpdateSessionState(sid string, state string) error
+
+	// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+	UpdateCodeVerifier(sid, cove string) error
+
+	// SaveCodeChallengeAndMethod - at step2 of AuthorizationCode flow
+	SaveCodeChallengeAndMethod(sid, coch, mth, code, ru string) error
+
 	// Flush will delete all data
 	Flush() error
+
+	// GetSessionAuthCode will return the authorization code for a session, if it is InAuth and the code did not expire.
+	GetAuthCode(sid string) map[string]string
+
+	// UpdateAuthSession - update state, access and refresh tokens values for auth session
+	UpdateAuthSession(sid, at, rt string) error
 }
 
-// IvmSS is sesstion store implemenation of interfce to the valid opertions over a session
-type IvmSS interface {
+// SessionStore is session store implemenation of interfce to the valid opertions over a session
+type SessionStore interface {
 
 	// Set a session key-value
-	Set(key string, value interface{}) error
+	Set(key, value interface{}) error
 
 	// Get the session value by its key
-	Get(key string) interface{}
+	Get(key interface{}) interface{}
 
 	// Delete the session by its key
-	Delete(key string) error
+	Delete(key interface{}) error
 
 	// SessionID returns the current session id
 	SessionID() string
@@ -160,32 +173,30 @@ func (sm *Sesman) sessionID() string {
 	return sid.String()
 }
 
-// Holds the session Value returned by the IvmSS interface
-type sesVal struct {
-	Sid          string
-	LastAccessed time.Time
-	Value        map[string]interface{}
-}
-
 // SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (sesval *sesVal, err error) {
+func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionStore, error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	var session IvmSS
+	var session SessionStore
 
-	fmt.Printf("[SessionStart] cookie name: %v, cookie header: %v\n", sm.cfg.CookieName, r.Header.Get("Cookie"))
 	cookie, err := r.Cookie(sm.cfg.CookieName)
-	if err != nil && err == http.ErrNoCookie {
 
-		fmt.Printf("while getting cookie error: %v\n", err)
+	if (err != nil && err == http.ErrNoCookie) || cookie.Value == "" {
 
 		sid := sm.sessionID()
+
+		// TODO: remove after debug
+		fmt.Printf("[SessionStart-1] generated sid: %v\n", sid)
+
 		session, err = sm.sessions.NewSession(sid)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error creating a new session: %v", err)
 		}
+
+		// TODO: remove after debug
+		fmt.Printf("[SessionStart-2] session ID: %v\n", session.SessionID())
 
 		cookie := http.Cookie{
 			Name:     sm.cfg.CookieName,
@@ -204,22 +215,14 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (sesval *
 		if err != nil {
 			return nil, fmt.Errorf("unable to unescape the session id, error %v", err)
 		}
-		fmt.Printf("cookie/session id value: %v\n", sid)
+
 		session, err = sm.sessions.FindOrCreate(sid)
 		if err != nil {
 			return nil, fmt.Errorf("unable to acquire the session id %v , error %v", sid, err)
 		}
 	}
 
-	siv := session.(*sesVal)
-	sv := siv.Value
-	switch sv["state"].(string) {
-	case "New":
-		fmt.Printf("state is: %v", sv["state"].(string))
-	default:
-		fmt.Printf("unknow state: %v", sv["state"].(string))
-	}
-	return siv, nil
+	return session, nil
 }
 
 // Manager - Middleware to work with Session manager
@@ -231,22 +234,45 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "deny")
 
 		session, err := sm.SessionStart(w, r)
-		if err != nil {
-			fmt.Printf("dropping the request due to session management error: %v\n", err)
+		if err != nil || session == nil {
+			w.Header().Set("Connection", "close")
+			fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		fmt.Printf("... acquired state is: %v", session)
+		sesStateValue := session.Get("state").(string)
+		r.Header.Set("X-Session-State", sesStateValue)
+		if sesStateValue == "Authed" {
+			r.Header.Set("Authorization", "Bearer "+session.Get("at").(string))
+		}
 
-		ctx := context.WithValue(r.Context(), sck, session)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		// TODO: remove after debug
+		sid := session.SessionID()
+		fmt.Printf("[mw Manager] session id [%v], with session state [%v] found in the request\n", sid, sesStateValue)
+
+		next.ServeHTTP(w, r)
 	})
 }
 
 // ActiveSessions will return the number of the active sessions in the session store
 func (sm *Sesman) ActiveSessions() int {
 	return sm.sessions.ActiveSessions()
+}
+
+// UpdateCodeVerifier will update the code verifier (cove) value assigned to the session id
+func (sm *Sesman) UpdateCodeVerifier(sid, cove string) error {
+	return sm.sessions.UpdateCodeVerifier(sid, cove)
+}
+
+// SaveACA - at step2 of AuthorizationCode flow save Athorization Code Attributes
+func (sm *Sesman) SaveACA(sid, coch, mth, code, ru string) error {
+	return sm.sessions.SaveCodeChallengeAndMethod(sid, coch, mth, code, ru)
+}
+
+// GetSessionAuthCode will return the authorization code for a session, if it is InAuth
+func (sm *Sesman) GetAuthCode(sid string) map[string]string {
+	return sm.sessions.GetAuthCode(sid)
 }
 
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.
@@ -266,7 +292,7 @@ func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	sm.sessions.Destroy(cookie.Value)
+	sm.sessions.DestroySID(cookie.Value)
 	expiration := time.Now()
 
 	cookie = &http.Cookie{
@@ -294,6 +320,7 @@ func (sm *Sesman) GC() {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
+	// TODO: find a way to prevent app crashing with panic
 	sm.sessions.SessionGC(sm.cfg.Maxlifetime)
 	time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
 }
@@ -312,25 +339,78 @@ func (sm *Sesman) Exists(w http.ResponseWriter, r *http.Request) (bool, error) {
 	return sm.sessions.Exists(cookie.Value), nil
 }
 
-func (sv *sesVal) Delete(key string) error {
+// Change state will be using the custom request header X-Session-State to handle the state defined by other services like API gateway and auth-service
+func (sm *Sesman) ChangeState(w http.ResponseWriter, r *http.Request) (bool, error) {
+
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		return false, ErrUnknownSessionID
+	}
+
+	var stateVal = r.Header.Get("X-Session-State")
+	if stateVal == "" {
+		return false, fmt.Errorf("missing not empty value for the new state in the request custome header x-session-state")
+	}
+
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	err = sm.sessions.UpdateSessionState(cookie.Value, stateVal)
+	if err != nil {
+		return false, err
+	}
+
+	fmt.Printf("Session id %v state MSUT be changed to %v\n", cookie.Value, stateVal)
+	return true, nil
+}
+
+// SessionAuth changes an existing session in state "InAuth" to a new id and state "Authed"
+func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt string) error {
+
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		return ErrUnknownSessionID
+	}
+
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	if !sm.sessions.Exists(cookie.Value) {
+		return ErrInvalidSessionID
+	}
+
+	err = sm.sessions.DestroySID(cookie.Value)
+	if err != nil {
+		return fmt.Errorf("error distroying the old `InAuth` session: %s", err.Error())
+	}
+
+	nsid := sm.sessionID()
+	_, err = sm.sessions.NewSession(nsid)
+	if err != nil {
+		return fmt.Errorf("error creating Authed session: %s", err.Error())
+	}
+
+	err = sm.sessions.UpdateAuthSession(nsid, at, rt)
+	if err != nil {
+		return fmt.Errorf("error updating Authed session: %s", err.Error())
+	}
+
+	nsCookie := http.Cookie{
+		Name:     sm.cfg.CookieName,
+		Value:    url.QueryEscape(nsid),
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   int(sm.cfg.Maxlifetime)}
+
+	http.SetCookie(w, &nsCookie)
+
 	return nil
-}
-
-func (sv *sesVal) Set(key string, value interface{}) error {
-	return nil
-}
-
-func (sv *sesVal) Get(key string) interface{} {
-	return nil
-}
-
-func (sv *sesVal) SessionID() string {
-	return ""
-}
-
-func (sv *sesVal) GetLTA() time.Time {
-	return time.Unix(0, 0)
 }
 
 // ErrUnknownSessionID  will be returned when a session id is required for a operation but it is missing or wrong value
 var ErrUnknownSessionID = errors.New("unknown session id")
+
+// ErrInvalidSessionID  will be returned when a session id is required for a operation but it does not exists.
+var ErrInvalidSessionID = errors.New("invalid session id")
