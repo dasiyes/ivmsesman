@@ -258,7 +258,9 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			rid string
 			ok  bool
 		)
-		if v := ctx.Value(RequestIDKey); v != nil {
+
+		v := ctx.Value(RequestIDKey)
+		if v != nil {
 			rid, ok = v.(string)
 			if !ok {
 				fmt.Printf("Error converting context value [%#v]", v)
