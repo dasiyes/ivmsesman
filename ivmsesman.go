@@ -263,6 +263,8 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 			if !ok {
 				fmt.Printf("Error converting context value [%#v]", v)
 			}
+		} else {
+			fmt.Printf("is v == nil: [%#v], RequestIDKey value: [%#v]", v == nil, ctxKeyRequestID(RequestIDKey))
 		}
 
 		ctx = context.WithValue(ctx, SessionObjKey, session)
