@@ -48,7 +48,7 @@ func (st *SessionStore) Delete(key interface{}) error {
 
 // SessionID will retrieve the id of the current session
 func (st *SessionStore) SessionID() string {
-	fmt.Printf("Sid: %v", st.TimeAccessed)
+	fmt.Printf("Sid: %v, Last Accessed: %d\n", st.Sid, st.TimeAccessed)
 	return st.Sid
 }
 
