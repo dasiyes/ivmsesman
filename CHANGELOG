@@ -1,3 +1,5 @@
+v0.4.8
+        - works for authentication with AthroziationCode with PKCE workflow.
 v0.4.7
         - chnage the state (to InAuth) in method SaveCodeChallengeAndMethod()
 v0.4.6
