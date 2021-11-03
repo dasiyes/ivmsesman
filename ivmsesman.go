@@ -15,9 +15,11 @@ import (
 
 // Key to use when setting the request ID.
 type ctxKeySessionObj int
+type ctxKeyRequestID int
 
 // RequestIDKey is the key that holds the unique request ID in a request context.
 const SessionObjKey ctxKeySessionObj = 0
+const RequestIDKey ctxKeyRequestID = 0
 
 //
 // TODO: Review the session manager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
@@ -250,12 +252,15 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 
 		sesStateValue := session.Get("state").(string)
 		r.Header.Set("X-Session-State", sesStateValue)
+
 		ctx := r.Context()
+		var rid = ctx.Value(RequestIDKey).(string)
+
 		ctx = context.WithValue(ctx, SessionObjKey, session)
 
 		// TODO: remove after debug
 		sid := session.SessionID()
-		fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", r.Header.Get("X-Request-Id"), sid, sesStateValue)
+		fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
