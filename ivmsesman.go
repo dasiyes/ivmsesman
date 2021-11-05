@@ -15,11 +15,9 @@ import (
 
 // Key to use when setting the request ID.
 type ctxKeySessionObj int
-type ctxKeyRequestID int
 
 // RequestIDKey is the key that holds the unique request ID in a request context.
 const SessionObjKey ctxKeySessionObj = 0
-const RequestIDKey ctxKeyRequestID = 0
 
 //
 // TODO: Review the session manager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
@@ -235,49 +233,35 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 }
 
 // Manager - Middleware to work as Session manager
-func (sm *Sesman) Manager(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (sm *Sesman) Manager(rid string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// Enhancing security
-		w.Header().Set("X-XSS-Protection", "1;mode=block")
-		w.Header().Set("X-Frame-Options", "deny")
+			// Enhancing security
+			w.Header().Set("X-XSS-Protection", "1;mode=block")
+			w.Header().Set("X-Frame-Options", "deny")
 
-		session, err := sm.SessionStart(w, r)
-		if err != nil || session == nil {
-			w.Header().Set("Connection", "close")
-			fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		sesStateValue := session.Get("state").(string)
-		r.Header.Set("X-Session-State", sesStateValue)
-
-		ctx := r.Context()
-		var (
-			rid string
-			ok  bool
-		)
-
-		v := ctx.Value(RequestIDKey)
-		if v != nil {
-			rid, ok = v.(string)
-			if !ok {
-				fmt.Printf("Error converting context value [%#v]", v)
+			session, err := sm.SessionStart(w, r)
+			if err != nil || session == nil {
+				w.Header().Set("Connection", "close")
+				fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
 			}
-		} else {
-			rsl := (v == nil)
-			fmt.Printf("is v == nil: [%v], RequestIDKey value: [%#v]\n", rsl, ctxKeyRequestID(RequestIDKey))
-		}
 
-		ctx = context.WithValue(ctx, SessionObjKey, session)
+			sesStateValue := session.Get("state").(string)
+			r.Header.Set("X-Session-State", sesStateValue)
 
-		// TODO: remove after debug
-		sid := session.SessionID()
-		fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, SessionObjKey, session)
 
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			// TODO: remove after debug
+			sid := session.SessionID()
+			fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 // ActiveSessions will return the number of the active sessions in the session store
