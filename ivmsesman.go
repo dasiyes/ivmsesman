@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/segmentio/ksuid"
 )
 
@@ -233,35 +234,35 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 }
 
 // Manager - Middleware to work as Session manager
-func (sm *Sesman) Manager(rid string) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (sm *Sesman) Manager(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			// Enhancing security
-			w.Header().Set("X-XSS-Protection", "1;mode=block")
-			w.Header().Set("X-Frame-Options", "deny")
+		// Enhancing security
+		w.Header().Set("X-XSS-Protection", "1;mode=block")
+		w.Header().Set("X-Frame-Options", "deny")
 
-			session, err := sm.SessionStart(w, r)
-			if err != nil || session == nil {
-				w.Header().Set("Connection", "close")
-				fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
+		session, err := sm.SessionStart(w, r)
+		if err != nil || session == nil {
+			w.Header().Set("Connection", "close")
+			fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 
-			sesStateValue := session.Get("state").(string)
-			r.Header.Set("X-Session-State", sesStateValue)
+		sesStateValue := session.Get("state").(string)
+		r.Header.Set("X-Session-State", sesStateValue)
 
-			ctx := r.Context()
-			ctx = context.WithValue(ctx, SessionObjKey, session)
+		ctx := r.Context()
+		rid := middleware.GetReqID(ctx)
 
-			// TODO: remove after debug
-			sid := session.SessionID()
-			fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
+		ctx = context.WithValue(ctx, SessionObjKey, session)
 
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
+		// TODO: remove after debug
+		sid := session.SessionID()
+		fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // ActiveSessions will return the number of the active sessions in the session store
