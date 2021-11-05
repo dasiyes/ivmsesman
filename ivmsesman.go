@@ -21,11 +21,11 @@ type ctxKeySessionObj int
 const SessionObjKey ctxKeySessionObj = 0
 
 //
-// TODO: Review the session MWmanager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+// TODO: Review the session manager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 // The stored information can include the client IP address, User-Agent, e-mail, username, user ID, role, privilege level, access rights, language preferences, account ID, current state, last login, session timeouts, and other internal session details.
 // If the session objects and properties contain sensitive information, such as credit card numbers, it is required to duly encrypt and protect the session management repository.
 
-// Sesman is the session MWmanager object to be used for managing sessions
+// Sesman is the session manager object to be used for managing sessions
 type Sesman struct {
 	sessions SessionRepository
 	lock     sync.Mutex
@@ -73,14 +73,14 @@ var providers = make(map[string]SessionRepository)
 //type SessionCtxKey string
 //var sckState SessionCtxKey = "sessionState"
 
-// NewSesman will create a new Session MWManager
+// NewSesman will create a new Session Manager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 	provider, ok := providers[ssProvider.String()]
 	if !ok {
 		return nil, fmt.Errorf("Sesman: unknown session store type %q ", ssProvider.String())
 	}
 	if cfg == nil || cfg.CookieName == "" || cfg.ProjectID == "" {
-		return nil, fmt.Errorf("Sesman: Missing or invalid Session MWManager Configuration")
+		return nil, fmt.Errorf("Sesman: Missing or invalid Session Manager Configuration")
 	}
 	return &Sesman{sessions: provider, cfg: cfg}, nil
 }
@@ -230,6 +230,7 @@ func (sm *Sesman) SessionManager(w http.ResponseWriter, r *http.Request) (Sessio
 		if err != nil {
 			return nil, fmt.Errorf("unable to acquire the session id %v , error %v", sid, err)
 		}
+
 	}
 
 	return session, nil
@@ -285,6 +286,19 @@ func (sm *Sesman) SaveACA(sid, coch, mth, code, ru string) error {
 // GetSessionAuthCode will return the authorization code for a session, if it is InAuth
 func (sm *Sesman) GetAuthCode(sid string) map[string]string {
 	return sm.sessions.GetAuthCode(sid)
+}
+
+// GetAuthSessAT - will extract the value of the attribute sent in the func
+func (sm *Sesman) GetAuthSessAT(ctx context.Context, val_att string) string {
+	if ctx == nil {
+		fmt.Printf("\n...nil context!\n")
+		return ""
+	}
+	if sess, ok := ctx.Value(SessionObjKey).(SessionStore); ok {
+		var at = sess.Get(val_att).(string)
+		return at
+	}
+	return ""
 }
 
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.

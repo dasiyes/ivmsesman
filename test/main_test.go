@@ -45,7 +45,7 @@ func TestNewSession(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			rr := httptest.NewRecorder()
 
-			ss, _ = gsm.SessionStart(rr, req)
+			ss, _ = gsm.SessionManager(rr, req)
 			if ss == nil {
 				t.Errorf("error while SessionStart %v\n", ss)
 			}
@@ -73,7 +73,7 @@ func TestNewSession(t *testing.T) {
 			req.AddCookie(&rc)
 
 			rr := httptest.NewRecorder()
-			ss, err = gsm.SessionStart(rr, req)
+			ss, err = gsm.SessionManager(rr, req)
 			if ss == nil {
 				t.Errorf("error while SessionStart %v\n", ss)
 			}
@@ -102,7 +102,7 @@ func TestNewSession(t *testing.T) {
 			req.AddCookie(&rc)
 
 			rr := httptest.NewRecorder()
-			ss, err = gsm.SessionStart(rr, req)
+			ss, err = gsm.SessionManager(rr, req)
 
 			if sid != ss.SessionID() {
 				t.Errorf("Unexpected difference for session id\n expected: %#v,\n got: %#v", sid, ss.SessionID())
@@ -225,7 +225,7 @@ func TestFirestoreNewSession(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			rr := httptest.NewRecorder()
 
-			ss, err = gsm.SessionStart(rr, req)
+			ss, err = gsm.SessionManager(rr, req)
 			if err != nil {
 				t.Errorf("error while starting new session %v", err)
 			}
@@ -254,7 +254,7 @@ func TestFirestoreNewSession(t *testing.T) {
 			req.AddCookie(&rc)
 
 			rr := httptest.NewRecorder()
-			ss, err = gsm.SessionStart(rr, req)
+			ss, err = gsm.SessionManager(rr, req)
 
 			if sid != ss.SessionID() {
 				t.Errorf("Unexpected difference for session id\n expected: %#v,\n got: %#v", sid, ss.SessionID())
