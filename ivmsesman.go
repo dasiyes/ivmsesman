@@ -21,11 +21,11 @@ type ctxKeySessionObj int
 const SessionObjKey ctxKeySessionObj = 0
 
 //
-// TODO: Review the session manager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
+// TODO: Review the session MWmanager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
 // The stored information can include the client IP address, User-Agent, e-mail, username, user ID, role, privilege level, access rights, language preferences, account ID, current state, last login, session timeouts, and other internal session details.
 // If the session objects and properties contain sensitive information, such as credit card numbers, it is required to duly encrypt and protect the session management repository.
 
-// Sesman is the session manager object to be used for managing sessions
+// Sesman is the session MWmanager object to be used for managing sessions
 type Sesman struct {
 	sessions SessionRepository
 	lock     sync.Mutex
@@ -73,14 +73,14 @@ var providers = make(map[string]SessionRepository)
 //type SessionCtxKey string
 //var sckState SessionCtxKey = "sessionState"
 
-// NewSesman will create a new Session Manager
+// NewSesman will create a new Session MWManager
 func NewSesman(ssProvider ssProvider, cfg *SesCfg) (*Sesman, error) {
 	provider, ok := providers[ssProvider.String()]
 	if !ok {
 		return nil, fmt.Errorf("Sesman: unknown session store type %q ", ssProvider.String())
 	}
 	if cfg == nil || cfg.CookieName == "" || cfg.ProjectID == "" {
-		return nil, fmt.Errorf("Sesman: Missing or invalid Session Manager Configuration")
+		return nil, fmt.Errorf("Sesman: Missing or invalid Session MWManager Configuration")
 	}
 	return &Sesman{sessions: provider, cfg: cfg}, nil
 }
@@ -181,22 +181,24 @@ func (sm *Sesman) sessionID() string {
 	return sid.String()
 }
 
-// SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionStore, error) {
+// SessionManager allocate (existing session id) or create a new session if it does not exists for validating user oprations
+func (sm *Sesman) SessionManager(w http.ResponseWriter, r *http.Request) (SessionStore, error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
 	var session SessionStore
 
+	// [ ]: remove after debug
+	fmt.Printf("searching for cookie name: [%s]\n", sm.cfg.CookieName)
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 
-	if (err != nil && err == http.ErrNoCookie) || cookie.Value == "" {
+	if err == http.ErrNoCookie {
 
 		sid := sm.sessionID()
 
 		// TODO: remove after debug
-		fmt.Printf("[SessionStart-1] generated sid: %v\n", sid)
+		fmt.Printf("[SessionManager-1] generated sid: %v\n", sid)
 
 		session, err = sm.sessions.NewSession(sid)
 		if err != nil {
@@ -204,7 +206,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 		}
 
 		// TODO: remove after debug
-		fmt.Printf("[SessionStart-2] session ID: %v\n", session.SessionID())
+		fmt.Printf("[SessionManager-2] session ID: %v\n", session.SessionID())
 
 		cookie := http.Cookie{
 			Name:     sm.cfg.CookieName,
@@ -233,15 +235,15 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 	return session, nil
 }
 
-// Manager - Middleware to work as Session manager
-func (sm *Sesman) Manager(next http.Handler) http.Handler {
+// MWManager - is a Middleware Handler that proxy the Session Manager
+func (sm *Sesman) MWManager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Enhancing security
 		w.Header().Set("X-XSS-Protection", "1;mode=block")
 		w.Header().Set("X-Frame-Options", "deny")
 
-		session, err := sm.SessionStart(w, r)
+		session, err := sm.SessionManager(w, r)
 		if err != nil || session == nil {
 			w.Header().Set("Connection", "close")
 			fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
@@ -259,7 +261,7 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 
 		// TODO: remove after debug
 		sid := session.SessionID()
-		fmt.Printf("[mw Manager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
+		fmt.Printf("[mw MWManager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

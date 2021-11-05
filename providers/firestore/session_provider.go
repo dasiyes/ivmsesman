@@ -291,7 +291,6 @@ func (pder *SessionProvider) NewSession(sid string) (ivmsesman.SessionStore, err
 	if err != nil {
 		return nil, fmt.Errorf("unable to save in session repository - error: %v", err)
 	}
-	// pder.sessions[sid] = newsess
 
 	return &newsess, nil
 }
