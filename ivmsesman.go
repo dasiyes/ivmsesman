@@ -318,7 +318,7 @@ func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	sm.sessions.DestroySID(cookie.Value)
+	_ = sm.sessions.DestroySID(cookie.Value)
 	expiration := time.Now()
 
 	cookie = &http.Cookie{

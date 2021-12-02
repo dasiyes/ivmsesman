@@ -21,7 +21,7 @@ type SessionStore struct {
 // Set stores the key:value pair in the repository
 func (st *SessionStore) Set(key, value interface{}) error {
 	st.value[key] = value
-	pder.UpdateTimeAccessed(st.sid)
+	_ = pder.UpdateTimeAccessed(st.sid)
 	return nil
 }
 
@@ -37,7 +37,7 @@ func (st *SessionStore) Get(key interface{}) interface{} {
 // Delete will remove a session value by the provided key
 func (st *SessionStore) Delete(key interface{}) error {
 	delete(st.value, key)
-	pder.UpdateTimeAccessed(st.sid)
+	_ = pder.UpdateTimeAccessed(st.sid)
 	return nil
 }
 

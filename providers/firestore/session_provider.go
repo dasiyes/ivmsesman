@@ -36,7 +36,17 @@ func (pder *SessionProvider) FindOrCreate(sid string) (ivmsesman.SessionStore, e
 				fmt.Printf("sid: %v was not found in the session store. A new session will be created. Error: %v\n", sid, err)
 				return pder.NewSession(sid)
 			}
-			return nil, fmt.Errorf("err while read session id: %v, err: %v", sid, err)
+			if strings.Contains(err.Error(), "NotFound") {
+				// Recreate the session with the old sid
+				nss, err := pder.NewSession(sid)
+				if err != nil {
+					return nil, fmt.Errorf("err re-create session id: %v, err: %v", sid, err)
+				}
+				return nss, nil
+
+			} else {
+				return nil, fmt.Errorf("err while read session id: %v, err: %v", sid, err)
+			}
 		}
 	}
 
