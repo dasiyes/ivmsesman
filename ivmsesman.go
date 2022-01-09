@@ -430,7 +430,17 @@ func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt str
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(sm.cfg.Maxlifetime)}
 
+	iaCookie := http.Cookie{
+		Name:     "_ia",
+		Value:    "1",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   int(sm.cfg.Maxlifetime)}
+
 	http.SetCookie(w, &nsCookie)
+	http.SetCookie(w, &iaCookie)
 
 	return nil
 }
