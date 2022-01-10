@@ -431,11 +431,12 @@ func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt str
 		MaxAge:   int(sm.cfg.Maxlifetime)}
 
 	iaCookie := http.Cookie{
-		Name:     "_ia",
+		Name:     "__Secure-ia",
 		Value:    "1",
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
+		Domain:   "ivmanto.dev",
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(sm.cfg.Maxlifetime)}
 
