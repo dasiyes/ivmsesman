@@ -421,8 +421,6 @@ func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt str
 		return fmt.Errorf("error updating Authed session: %s", err.Error())
 	}
 
-	w.Header().Add("Set-Cookie", "ia=1; HttpOnly")
-
 	nsCookie := http.Cookie{
 		Name:     sm.cfg.CookieName,
 		Value:    url.QueryEscape(nsid),
