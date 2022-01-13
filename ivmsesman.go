@@ -219,6 +219,9 @@ func (sm *Sesman) SessionManager(w http.ResponseWriter, r *http.Request) (Sessio
 
 		http.SetCookie(w, &cookie)
 
+		// Delete previously set ia cookie
+		w.Header().Add("Set-Cookie", "ia=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT")
+
 	} else {
 
 		sid, err := url.QueryUnescape(cookie.Value)
@@ -230,7 +233,6 @@ func (sm *Sesman) SessionManager(w http.ResponseWriter, r *http.Request) (Sessio
 		if err != nil {
 			return nil, fmt.Errorf("unable to acquire the session id %v , error %v", sid, err)
 		}
-
 	}
 
 	return session, nil
@@ -241,7 +243,7 @@ func (sm *Sesman) MWManager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Enhancing security
-		w.Header().Set("X-XSS-Protection", "1;mode=block")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("X-Frame-Options", "deny")
 
 		session, err := sm.SessionManager(w, r)
