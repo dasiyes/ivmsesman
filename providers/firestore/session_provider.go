@@ -266,7 +266,7 @@ func (pder *SessionProvider) Flush() error {
 }
 
 // UpdateAuthSession - update state, access and refresh tokens values for auth session
-func (pder *SessionProvider) UpdateAuthSession(sid, at, rt string) error {
+func (pder *SessionProvider) UpdateAuthSession(sid, at, rt, uid string) error {
 
 	_, err := pder.client.Collection(pder.collection).Doc(sid).Update(context.TODO(),
 		[]firestore.Update{
@@ -277,6 +277,10 @@ func (pder *SessionProvider) UpdateAuthSession(sid, at, rt string) error {
 			{
 				Path:  "Value.rt",
 				Value: rt,
+			},
+			{
+				Path:  "Value.uid",
+				Value: uid,
 			},
 			{
 				Path:  "Value.state",

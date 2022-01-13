@@ -128,7 +128,7 @@ type SessionRepository interface {
 	GetAuthCode(sid string) map[string]string
 
 	// UpdateAuthSession - update state, access and refresh tokens values for auth session
-	UpdateAuthSession(sid, at, rt string) error
+	UpdateAuthSession(sid, at, rt, uid string) error
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -391,7 +391,7 @@ func (sm *Sesman) ChangeState(w http.ResponseWriter, r *http.Request) (bool, err
 }
 
 // SessionAuth changes an existing session in state "InAuth" to a new id and state "Authed"
-func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt string) error {
+func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt, uid string) error {
 
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 	if err != nil || cookie.Value == "" {
@@ -416,7 +416,7 @@ func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt str
 		return fmt.Errorf("error creating Authed session: %s", err.Error())
 	}
 
-	err = sm.sessions.UpdateAuthSession(nsid, at, rt)
+	err = sm.sessions.UpdateAuthSession(nsid, at, rt, uid)
 	if err != nil {
 		return fmt.Errorf("error updating Authed session: %s", err.Error())
 	}

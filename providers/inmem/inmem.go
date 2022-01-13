@@ -190,7 +190,7 @@ func (pder *SessionStoreProvider) GetAuthCode(sid string) map[string]string {
 	return nil
 }
 
-func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt string) error {
+func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt, uid string) error {
 
 	return nil
 }
