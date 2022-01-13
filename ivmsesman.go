@@ -219,9 +219,6 @@ func (sm *Sesman) SessionManager(w http.ResponseWriter, r *http.Request) (Sessio
 
 		http.SetCookie(w, &cookie)
 
-		// Delete previously set ia cookie
-		w.Header().Add("Set-Cookie", "ia=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT")
-
 	} else {
 
 		sid, err := url.QueryUnescape(cookie.Value)
@@ -265,6 +262,11 @@ func (sm *Sesman) MWManager(next http.Handler) http.Handler {
 		// TODO: remove after debug
 		sid := session.SessionID()
 		fmt.Printf("[mw MWManager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
+
+		if sesStateValue != "Authed" {
+			// Delete previously set ia cookie
+			w.Header().Add("Set-Cookie", "ia=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT")
+		}
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
