@@ -305,11 +305,34 @@ func (sm *Sesman) GetAuthSessAT(ctx context.Context, val_att string) string {
 	return ""
 }
 
+// GetAuthSessionAttribute - will use the request to get the session id (either context or the session cookie) and return the requested session's attribute
+func (sm *Sesman) GetAuthSessionAttribute(r *http.Request, att_name string) (atrb interface{}, err error) {
+
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		return nil, ErrUnknownSessionID
+	}
+
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	if !sm.sessions.Exists(cookie.Value) {
+		return nil, ErrInvalidSessionID
+	}
+
+	ses, errs := sm.sessions.FindOrCreate(cookie.Value)
+	if errs != nil {
+		return nil, fmt.Errorf("unable to find session id %s, error: %v", cookie.Value, errs)
+	}
+
+	return ses.Get(att_name), nil
+}
+
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.
-// TODO: Consider if there will be use-case for this to be implemented...
-// func (sm *Sesman) GetLastAccessedAt() int64 {
-// 	return 0
-// }
+func (sm *Sesman) GetLastAccessedAt() int64 {
+	// [ ] implement getting the LAT
+	return 0
+}
 
 // Destroy sessionid
 func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
