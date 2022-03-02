@@ -316,7 +316,7 @@ func (pder *SessionProvider) Blacklisting(ip, path string, data interface{}) {
 	v["created"] = time.Now()
 	v["details"] = data
 
-	_, err := pder.client.Collection("blacklist").Doc(ip).Set(context.TODO(), v)
+	_, err := pder.client.Collection("blacklist").Doc(ip).Set(context.TODO(), v, firestore.MergeAll)
 	if err != nil {
 		fmt.Printf("error update ip %s in the blacklist", ip)
 		return
