@@ -132,6 +132,9 @@ type SessionRepository interface {
 
 	//Blacklisting
 	Blacklisting(ip, path string, data interface{})
+
+	// IsIPExistInBL will check the black list
+	IsIPExistInBL(ip string) bool
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -298,6 +301,11 @@ func (sm *Sesman) GetAuthCode(sid string) map[string]string {
 // Blacklisting the ip from the func argument
 func (sm *Sesman) AddBlacklisting(ip, path string, data interface{}) {
 	sm.sessions.Blacklisting(ip, path, data)
+}
+
+// IsBlackListed - checks if the ip is blacklisted
+func (sm *Sesman) IsBlackListed(ip string) bool {
+	return sm.sessions.IsIPExistInBL(ip)
 }
 
 // GetAuthSessAT - will extract the value of the attribute sent in the func

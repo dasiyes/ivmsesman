@@ -324,6 +324,13 @@ func (pder *SessionProvider) Blacklisting(ip, path string, data interface{}) {
 	fmt.Printf("ip %s listed in the blacklist", ip)
 }
 
+// IsIPExistInBL returns boolean result for the @ip being or not in the blacklist
+func (pder *SessionProvider) IsIPExistInBL(ip string) bool {
+
+	_, err := pder.client.Collection("blacklist").Doc(ip).Get(context.TODO())
+	return err == nil
+}
+
 // init - Initiates at run-time the following code
 func init() {
 	// Initialize the GCP project to be used

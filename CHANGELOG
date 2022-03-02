@@ -1,6 +1,8 @@
 v0.4.9
         - implement for authenticated sessions (state:`Authed`) the exchange of sessionID token to authorisation (granting access) through request scopes
         - adding session attribute user id to authenticated session
+        - implement blacklisting of IPs that are making request by domain ip instead of name
+        
 v0.4.8
         - works for authentication with AthroziationCode with PKCE workflow.
 v0.4.7

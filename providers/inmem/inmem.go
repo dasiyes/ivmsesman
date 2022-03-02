@@ -190,6 +190,15 @@ func (pder *SessionStoreProvider) GetAuthCode(sid string) map[string]string {
 	return nil
 }
 
+// NewSession creates a new session value in the store with sid as a key
+func (pder *SessionStoreProvider) Blacklisting(ip, path string, data interface{}) {
+	// TODO [dev]: implement
+}
+
+func (pder *SessionStoreProvider) IsIPExistInBL(ip string) bool {
+	// TODO [dev]: implement
+	return false
+}
 func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt, uid string) error {
 
 	return nil
