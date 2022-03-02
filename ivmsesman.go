@@ -131,7 +131,7 @@ type SessionRepository interface {
 	UpdateAuthSession(sid, at, rt, uid string) error
 
 	//Blacklisting
-	Blacklisting(ip string)
+	Blacklisting(ip, path string, data interface{})
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -296,8 +296,8 @@ func (sm *Sesman) GetAuthCode(sid string) map[string]string {
 }
 
 // Blacklisting the ip from the func argument
-func (sm *Sesman) Blacklisting(ip string) {
-	sm.sessions.Blacklisting(ip)
+func (sm *Sesman) AddBlacklisting(ip, path string, data interface{}) {
+	sm.sessions.Blacklisting(ip, path, data)
 }
 
 // GetAuthSessAT - will extract the value of the attribute sent in the func

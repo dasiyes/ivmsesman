@@ -310,19 +310,16 @@ func (pder *SessionProvider) NewSession(sid string) (ivmsesman.SessionStore, err
 }
 
 // NewSession creates a new session value in the store with sid as a key
-func (pder *SessionProvider) Blacklisting(ip string) {
+func (pder *SessionProvider) Blacklisting(ip, path string, data interface{}) {
 
 	v := make(map[string]interface{})
 	v["created"] = time.Now()
+	v["details"] = data
 
-	_, _, err := pder.client.Collection("blacklist").Add(context.TODO(), v)
+	_, err := pder.client.Collection("blacklist").Doc(ip).Set(context.TODO(), v)
 	if err != nil {
-		v["updated"] = time.Now()
-		_, err = pder.client.Collection("blacklist").Doc(ip).Set(context.TODO(), v)
-		if err != nil {
-			fmt.Printf("error update ip %s", ip)
-		}
-		fmt.Printf("blacklisted ip %s has been updated\n", ip)
+		fmt.Printf("error update ip %s in the blacklist", ip)
+		return
 	}
 	fmt.Printf("ip %s listed in the blacklist", ip)
 }
