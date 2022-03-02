@@ -309,6 +309,24 @@ func (pder *SessionProvider) NewSession(sid string) (ivmsesman.SessionStore, err
 	return &newsess, nil
 }
 
+// NewSession creates a new session value in the store with sid as a key
+func (pder *SessionProvider) Blacklisting(ip string) {
+
+	v := make(map[string]interface{})
+	v["created"] = time.Now()
+
+	_, _, err := pder.client.Collection("blacklist").Add(context.TODO(), v)
+	if err != nil {
+		v["updated"] = time.Now()
+		_, err = pder.client.Collection("blacklist").Doc(ip).Set(context.TODO(), v)
+		if err != nil {
+			fmt.Printf("error update ip %s", ip)
+		}
+		fmt.Printf("blacklisted ip %s has been updated\n", ip)
+	}
+	fmt.Printf("ip %s listed in the blacklist", ip)
+}
+
 // init - Initiates at run-time the following code
 func init() {
 	// Initialize the GCP project to be used

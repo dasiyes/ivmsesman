@@ -129,6 +129,9 @@ type SessionRepository interface {
 
 	// UpdateAuthSession - update state, access and refresh tokens values for auth session
 	UpdateAuthSession(sid, at, rt, uid string) error
+
+	//Blacklisting
+	Blacklisting(ip string)
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -290,6 +293,11 @@ func (sm *Sesman) SaveACA(sid, coch, mth, code, ru string) error {
 // GetSessionAuthCode will return the authorization code for a session, if it is InAuth
 func (sm *Sesman) GetAuthCode(sid string) map[string]string {
 	return sm.sessions.GetAuthCode(sid)
+}
+
+// Blacklisting the ip from the func argument
+func (sm *Sesman) Blacklisting(ip string) {
+	sm.sessions.Blacklisting(ip)
 }
 
 // GetAuthSessAT - will extract the value of the attribute sent in the func
