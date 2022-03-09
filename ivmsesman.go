@@ -38,6 +38,7 @@ type SesCfg struct {
 	Maxlifetime     int64
 	VisitCookieName string
 	ProjectID       string
+	BLCleanInterval int64
 }
 
 type ssProvider int
@@ -135,6 +136,9 @@ type SessionRepository interface {
 
 	// IsIPExistInBL will check the black list
 	IsIPExistInBL(ip string) bool
+
+	// BLClean is a support function to clean the Blacklist on regular base
+	BLClean()
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -392,6 +396,13 @@ func (sm *Sesman) GC() {
 	// TODO: find a way to prevent app crashing with panic
 	sm.sessions.SessionGC(sm.cfg.Maxlifetime)
 	time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
+}
+
+// BLC is a support function to clean the blacklist collection in FireStore on regular RunServer
+func (sm *Sesman) BLC() {
+
+	sm.sessions.BLClean()
+	time.AfterFunc(time.Duration(sm.cfg.BLCleanInterval), func() { sm.BLC() })
 }
 
 // Exists will check the session repository for a session by its id and return the result as bool

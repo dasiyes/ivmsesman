@@ -203,6 +203,10 @@ func (pder *SessionStoreProvider) UpdateAuthSession(sid, at, rt, uid string) err
 
 	return nil
 }
+func (pder *SessionStoreProvider) BLClean() {
+	// TODO [dev]: implement
+}
+
 func init() {
 	pder.sessions = make(map[string]*list.Element)
 	ivmsesman.RegisterProvider(ivmsesman.Memory, pder)

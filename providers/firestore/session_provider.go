@@ -20,6 +20,8 @@ var pder = &SessionProvider{collection: "sessions"}
 type SessionProvider struct {
 	client     *firestore.Client
 	collection string
+	// the name of the collection for the blacklist
+	blacklist string
 }
 
 // FindOrCreate will first search the store for a session value with provided sid. If not not found, a new session value will be created and stored in the session store
@@ -93,6 +95,39 @@ func (pder *SessionProvider) SessionGC(maxlifetime int64) {
 	}
 	if erritr != nil {
 		fmt.Printf("error stack: %v", erritr)
+	}
+}
+
+// BLClean - cleaning the Firestore blacklist
+func (pder *SessionProvider) BLClean() {
+	docs_cnt := 0
+	del_docs_cnt := 0
+	// set default value for ip caranteen period to 30 dasiyes
+	//cp := int64(2590000)
+	cp := int64(86400)
+	// treshold value back in the time (default 30 days) after which the blacklisted ip address will be reviewed for cleaning
+	to := time.Now().Unix() - cp
+	iter := pder.client.Collection(pder.blacklist).Where("created", "<", time.Unix(to, 0)).Documents(context.TODO())
+	for {
+		docs_cnt++
+		d, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			fmt.Printf("ip address %v, raised an error: %v\n", d.Ref.ID, err)
+			continue
+		}
+		// send the IP address for verification for being good bot
+		if checkIPState(d.Ref.ID) {
+			_, err = d.Ref.Delete(context.TODO())
+			if err != nil {
+				fmt.Printf("while deleting ip %s, an error raised: %v\n", d.Ref.ID, err)
+				continue
+			}
+			del_docs_cnt++
+		}
+		fmt.Printf("%d docs reviewed, %d deleted\n", docs_cnt, del_docs_cnt)
 	}
 }
 
@@ -317,7 +352,7 @@ func (pder *SessionProvider) Blacklisting(ip, path string, data interface{}) {
 	v["requestURI"] = path
 	v["details"] = data
 
-	_, err := pder.client.Collection("blacklist").Doc(ip).Set(context.TODO(), v, firestore.MergeAll)
+	_, err := pder.client.Collection(pder.blacklist).Doc(ip).Set(context.TODO(), v, firestore.MergeAll)
 	if err != nil {
 		fmt.Printf("error update ip %s in the blacklist", ip)
 		return
@@ -328,7 +363,7 @@ func (pder *SessionProvider) Blacklisting(ip, path string, data interface{}) {
 // IsIPExistInBL returns boolean result for the @ip being or not in the blacklist
 func (pder *SessionProvider) IsIPExistInBL(ip string) bool {
 
-	_, err := pder.client.Collection("blacklist").Doc(ip).Get(context.TODO())
+	_, err := pder.client.Collection(pder.blacklist).Doc(ip).Get(context.TODO())
 	return err == nil
 }
 
