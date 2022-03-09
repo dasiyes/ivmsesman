@@ -1,7 +1,6 @@
 package firestoredb
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -33,7 +32,6 @@ import (
 // 			}
 // 		}
 // 	}
-
 // 	return false
 // }
 
@@ -41,13 +39,13 @@ func nativeReverseDNSLookup(ip string) bool {
 
 	addrs, err := net.LookupAddr(ip)
 	if err != nil {
-		fmt.Printf("when lookup IP: %s, an error raised: %v\n", ip, err)
+		// fmt.Printf("when lookup IP: %s, an error raised: %v\n", ip, err)
 		return false
 	}
 	for _, addr := range addrs {
 		ips, err := net.LookupIP(addr)
 		if err != nil {
-			fmt.Printf("while lookup addr: %s, an error raised %v", addr, err)
+			// fmt.Printf("while lookup addr: %s, an error raised %v\n", addr, err)
 			continue
 		}
 		for _, ipr := range ips {
