@@ -402,7 +402,11 @@ func (sm *Sesman) GC() {
 func (sm *Sesman) BLC() {
 
 	sm.sessions.BLClean()
-	time.AfterFunc(time.Duration(sm.cfg.BLCleanInterval), func() { sm.BLC() })
+	intv := time.Duration(sm.cfg.BLCleanInterval) * time.Second
+	time.AfterFunc(intv, func() {
+		fmt.Printf("started at: %v, with interval: %v\n", time.Now(), intv)
+		sm.BLC()
+	})
 }
 
 // Exists will check the session repository for a session by its id and return the result as bool
