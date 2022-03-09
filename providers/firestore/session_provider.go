@@ -124,7 +124,7 @@ func (pder *SessionProvider) BLClean() {
 		}
 
 		// send the IP address for verification for being good bot
-		if checkIPState(d.Ref.ID) {
+		if nativeReverseDNSLookup(d.Ref.ID) {
 			_, err = d.Ref.Delete(context.TODO())
 			if err != nil {
 				fmt.Printf("while deleting ip %s, an error raised: %v\n", d.Ref.ID, err)
