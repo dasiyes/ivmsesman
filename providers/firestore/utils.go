@@ -3,6 +3,7 @@ package firestoredb
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 // checkIPState is a spport function that will take an IP address as an argument
@@ -14,8 +15,31 @@ func checkIPState(ip string) bool {
 	cmd := exec.Command("host", ip)
 	if output, err := cmd.Output(); err != nil {
 		fmt.Printf("while running `host` for IP:%s, raised an error: %v\n", ip, err)
+
 	} else {
+
 		fmt.Printf("Output: %s\n", output)
+		output_parts := strings.Split(string(output), " domain name pointer ")
+
+		if len(output_parts) > 1 {
+
+			fmt.Printf("the domain name pointer is: %s", output_parts[1])
+			cmd2 := exec.Command("host", output_parts[1])
+
+			if output2, err2 := cmd2.Output(); err2 != nil {
+				fmt.Printf("while running `host` for dns: %s, error raised:%v", output_parts[1], err2)
+
+			} else {
+				output_parts2 := strings.Split(string(output2), " has address ")
+				if len(output_parts2) > 1 {
+
+					fmt.Printf("the reverse lookup returned IP: %s", output_parts2[1])
+					if output_parts2[1] == ip {
+						return true
+					}
+				}
+			}
+		}
 	}
 
 	return false
