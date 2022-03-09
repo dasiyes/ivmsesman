@@ -104,15 +104,16 @@ func (pder *SessionProvider) BLClean() {
 	docs_cnt := 0
 	del_docs_cnt := 0
 
-	// set default value for ip caranteen period to 30 dasiyes
-	cp := int64(2590000)
+	// set default value for ip caranteen period to 30 days
+	// cp := int64(2590000)
+	cp := int64(259200) // 3 days
 
 	// treshold value back in the time (default 30 days) after which the blacklisted ip address will be reviewed for cleaning
 	to := time.Now().Unix() - cp
 
 	iter := pder.client.Collection(pder.blacklist).Where("created", "<", time.Unix(to, 0)).Documents(context.TODO())
 	for {
-		docs_cnt++
+
 		d, err := iter.Next()
 		if err == iterator.Done {
 			break
@@ -121,6 +122,7 @@ func (pder *SessionProvider) BLClean() {
 			fmt.Printf("ip address %v, raised an error: %v\n", d.Ref.ID, err)
 			continue
 		}
+
 		// send the IP address for verification for being good bot
 		if checkIPState(d.Ref.ID) {
 			_, err = d.Ref.Delete(context.TODO())
@@ -130,6 +132,7 @@ func (pder *SessionProvider) BLClean() {
 			}
 			del_docs_cnt++
 		}
+		docs_cnt++
 	}
 	fmt.Printf(" * blacklist clean summary: %d docs reviewed, %d deleted\n", docs_cnt, del_docs_cnt)
 }
