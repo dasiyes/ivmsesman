@@ -14,7 +14,8 @@ import (
 	"github.com/dasiyes/ivmsesman"
 )
 
-var pder = &SessionProvider{collection: "sessions"}
+// TODO [dev]: move the value of `sessions` and `blacklist` in the configuration
+var pder = &SessionProvider{collection: "sessions", blacklist: "blacklist"}
 
 // SessionProvider is the DAL holding the methods for database operations fr the SessionManager
 type SessionProvider struct {
