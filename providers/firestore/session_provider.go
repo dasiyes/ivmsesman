@@ -360,10 +360,10 @@ func (pder *SessionProvider) Blacklisting(ip, path string, data interface{}) {
 
 	_, err := pder.client.Collection(pder.blacklist).Doc(ip).Set(context.TODO(), v, firestore.MergeAll)
 	if err != nil {
-		fmt.Printf("error update ip %s in the blacklist", ip)
+		fmt.Printf("error update ip %s in the blacklist\n", ip)
 		return
 	}
-	fmt.Printf("ip %s listed in the blacklist", ip)
+	fmt.Printf("ip %s added in the blacklist\n", ip)
 }
 
 // IsIPExistInBL returns boolean result for the @ip being or not in the blacklist
