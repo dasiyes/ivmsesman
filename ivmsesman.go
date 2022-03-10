@@ -2,6 +2,7 @@
 package ivmsesman
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,8 +10,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/segmentio/ksuid"
 )
+
+// Key to use when setting the request ID.
+type ctxKeySessionObj int
+
+// RequestIDKey is the key that holds the unique request ID in a request context.
+const SessionObjKey ctxKeySessionObj = 0
 
 //
 // TODO: Review the session manager design to match the guidlines from (https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
@@ -30,6 +38,7 @@ type SesCfg struct {
 	Maxlifetime     int64
 	VisitCookieName string
 	ProjectID       string
+	BLCleanInterval int64
 }
 
 type ssProvider int
@@ -120,7 +129,16 @@ type SessionRepository interface {
 	GetAuthCode(sid string) map[string]string
 
 	// UpdateAuthSession - update state, access and refresh tokens values for auth session
-	UpdateAuthSession(sid, at, rt string) error
+	UpdateAuthSession(sid, at, rt, uid string) error
+
+	//Blacklisting
+	Blacklisting(ip, path string, data interface{})
+
+	// IsIPExistInBL will check the black list
+	IsIPExistInBL(ip string) bool
+
+	// BLClean is a support function to clean the Blacklist on regular base
+	BLClean()
 }
 
 // SessionStore is session store implemenation of interfce to the valid opertions over a session
@@ -173,22 +191,24 @@ func (sm *Sesman) sessionID() string {
 	return sid.String()
 }
 
-// SessionStart allocate (existing session id) or create a new session if it does not exists for validating user oprations
-func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionStore, error) {
+// SessionManager allocate (existing session id) or create a new session if it does not exists for validating user oprations
+func (sm *Sesman) SessionManager(w http.ResponseWriter, r *http.Request) (SessionStore, error) {
 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
 	var session SessionStore
 
+	// [ ]: remove after debug
+	fmt.Printf("searching for cookie name: [%s]\n", sm.cfg.CookieName)
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 
-	if (err != nil && err == http.ErrNoCookie) || cookie.Value == "" {
+	if err == http.ErrNoCookie {
 
 		sid := sm.sessionID()
 
 		// TODO: remove after debug
-		fmt.Printf("[SessionStart-1] generated sid: %v\n", sid)
+		fmt.Printf("[SessionManager-1] generated sid: %v\n", sid)
 
 		session, err = sm.sessions.NewSession(sid)
 		if err != nil {
@@ -196,7 +216,7 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 		}
 
 		// TODO: remove after debug
-		fmt.Printf("[SessionStart-2] session ID: %v\n", session.SessionID())
+		fmt.Printf("[SessionManager-2] session ID: %v\n", session.SessionID())
 
 		cookie := http.Cookie{
 			Name:     sm.cfg.CookieName,
@@ -225,15 +245,15 @@ func (sm *Sesman) SessionStart(w http.ResponseWriter, r *http.Request) (SessionS
 	return session, nil
 }
 
-// Manager - Middleware to work with Session manager
-func (sm *Sesman) Manager(next http.Handler) http.Handler {
+// MWManager - is a Middleware Handler that proxy the Session Manager
+func (sm *Sesman) MWManager(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Enhancing security
-		w.Header().Set("X-XSS-Protection", "1;mode=block")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("X-Frame-Options", "deny")
 
-		session, err := sm.SessionStart(w, r)
+		session, err := sm.SessionManager(w, r)
 		if err != nil || session == nil {
 			w.Header().Set("Connection", "close")
 			fmt.Printf("[Error] dropping the request due to session management error: %v\n", err)
@@ -243,15 +263,22 @@ func (sm *Sesman) Manager(next http.Handler) http.Handler {
 
 		sesStateValue := session.Get("state").(string)
 		r.Header.Set("X-Session-State", sesStateValue)
-		if sesStateValue == "Authed" {
-			r.Header.Set("Authorization", "Bearer "+session.Get("at").(string))
-		}
+
+		ctx := r.Context()
+		rid := middleware.GetReqID(ctx)
+
+		ctx = context.WithValue(ctx, SessionObjKey, session)
 
 		// TODO: remove after debug
 		sid := session.SessionID()
-		fmt.Printf("[mw Manager] session id [%v], with session state [%v] found in the request\n", sid, sesStateValue)
+		fmt.Printf("[mw MWManager] request id [%s] session id [%v], with session state [%v] found in the request\n", rid, sid, sesStateValue)
 
-		next.ServeHTTP(w, r)
+		if sesStateValue != "Authed" {
+			// Delete previously set ia cookie
+			w.Header().Add("Set-Cookie", "ia=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT")
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -275,11 +302,57 @@ func (sm *Sesman) GetAuthCode(sid string) map[string]string {
 	return sm.sessions.GetAuthCode(sid)
 }
 
+// Blacklisting the ip from the func argument
+func (sm *Sesman) AddBlacklisting(ip, path string, data interface{}) {
+	sm.sessions.Blacklisting(ip, path, data)
+}
+
+// IsBlackListed - checks if the ip is blacklisted
+func (sm *Sesman) IsBlackListed(ip string) bool {
+	return sm.sessions.IsIPExistInBL(ip)
+}
+
+// GetAuthSessAT - will extract the value of the attribute sent in the func
+func (sm *Sesman) GetAuthSessAT(ctx context.Context, val_att string) string {
+	if ctx == nil {
+		fmt.Printf("\n...nil context!\n")
+		return ""
+	}
+	if sess, ok := ctx.Value(SessionObjKey).(SessionStore); ok {
+		var at = sess.Get(val_att).(string)
+		return at
+	}
+	return ""
+}
+
+// GetAuthSessionAttribute - will use the request to get the session id (either context or the session cookie) and return the requested session's attribute
+func (sm *Sesman) GetAuthSessionAttribute(r *http.Request, att_name string) (atrb interface{}, err error) {
+
+	cookie, err := r.Cookie(sm.cfg.CookieName)
+	if err != nil || cookie.Value == "" {
+		return nil, ErrUnknownSessionID
+	}
+
+	sm.lock.Lock()
+	defer sm.lock.Unlock()
+
+	if !sm.sessions.Exists(cookie.Value) {
+		return nil, ErrInvalidSessionID
+	}
+
+	ses, errs := sm.sessions.FindOrCreate(cookie.Value)
+	if errs != nil {
+		return nil, fmt.Errorf("unable to find session id %s, error: %v", cookie.Value, errs)
+	}
+
+	return ses.Get(att_name), nil
+}
+
 // GetLastAccessedAt will return the seconds since Epoch when the session was lastly accessed.
-// TODO: Consider if there will be use-case for this to be implemented...
-// func (sm *Sesman) GetLastAccessedAt() int64 {
-// 	return 0
-// }
+func (sm *Sesman) GetLastAccessedAt() int64 {
+	// [ ] implement getting the LAT
+	return 0
+}
 
 // Destroy sessionid
 func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
@@ -292,7 +365,7 @@ func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	sm.sessions.DestroySID(cookie.Value)
+	_ = sm.sessions.DestroySID(cookie.Value)
 	expiration := time.Now()
 
 	cookie = &http.Cookie{
@@ -323,6 +396,17 @@ func (sm *Sesman) GC() {
 	// TODO: find a way to prevent app crashing with panic
 	sm.sessions.SessionGC(sm.cfg.Maxlifetime)
 	time.AfterFunc(time.Duration(sm.cfg.Maxlifetime), func() { sm.GC() })
+}
+
+// BLC is a support function to clean the blacklist collection in FireStore on regular RunServer
+func (sm *Sesman) BLC() {
+
+	sm.sessions.BLClean()
+	intv := time.Duration(sm.cfg.BLCleanInterval) * time.Second
+	time.AfterFunc(intv, func() {
+		fmt.Printf("started at: %v, with interval: %v\n", time.Now(), intv)
+		sm.BLC()
+	})
 }
 
 // Exists will check the session repository for a session by its id and return the result as bool
@@ -365,7 +449,7 @@ func (sm *Sesman) ChangeState(w http.ResponseWriter, r *http.Request) (bool, err
 }
 
 // SessionAuth changes an existing session in state "InAuth" to a new id and state "Authed"
-func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt string) error {
+func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt, uid string) error {
 
 	cookie, err := r.Cookie(sm.cfg.CookieName)
 	if err != nil || cookie.Value == "" {
@@ -390,7 +474,7 @@ func (sm *Sesman) SessionAuth(w http.ResponseWriter, r *http.Request, at, rt str
 		return fmt.Errorf("error creating Authed session: %s", err.Error())
 	}
 
-	err = sm.sessions.UpdateAuthSession(nsid, at, rt)
+	err = sm.sessions.UpdateAuthSession(nsid, at, rt, uid)
 	if err != nil {
 		return fmt.Errorf("error updating Authed session: %s", err.Error())
 	}
