@@ -1,3 +1,6 @@
+v0.5.0
+        - tbd
+        
 v0.4.9
         - implements for authenticated sessions (state:`Authed`) the exchange of sessionID token to authorisation (granting access) through request scopes
         - adding session attribute user id to authenticated session
