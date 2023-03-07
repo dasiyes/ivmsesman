@@ -77,27 +77,39 @@ func (pder *SessionProvider) SessionGC(maxlifetime int64) {
 	if maxlifetime == 0 {
 		maxlifetime = 3600
 	}
-	iter := pder.client.Collection(pder.collection).Where("TimeAccessed", "<", (time.Now().Unix() - maxlifetime)).Documents(context.TODO())
+	docs, err := pder.client.Collection(pder.collection).Where("TimeAccessed", "<", (time.Now().Unix() - maxlifetime)).Documents(context.TODO()).GetAll()
 
-	var erritr error
+	if err != nil {
+		fmt.Printf("error raised while iterate over set of expired sessions: %s", err)
+		return
+	}
 
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			erritr = fmt.Errorf("Error raised while iterate expired sessions: %v", err)
-			break
-		}
+	for _, doc := range docs {
 		_, err = doc.Ref.Delete(context.TODO())
 		if err != nil {
-			erritr = fmt.Errorf("error deleting session id %v, err: %v", doc.Ref.ID, err)
+			fmt.Printf("error deleting session id %s, err: %s", doc.Ref.ID, err)
 		}
 	}
-	if erritr != nil {
-		fmt.Printf("error stack: %v", erritr)
-	}
+
+	// DEPRICATED
+	// var erritr error
+	// for {
+	// 	doc, err := iter.Next()
+	// 	if err == iterator.Done {
+	// 		break
+	// 	}
+	// 	if err != nil {
+	// 		erritr = fmt.Errorf("Error raised while iterate expired sessions: %w", err)
+	// 		break
+	// 	}
+	// 	_, err = doc.Ref.Delete(context.TODO())
+	// 	if err != nil {
+	// 		erritr = fmt.Errorf("error deleting session id %s, err: %w", doc.Ref.ID, err)
+	// 	}
+	// }
+	// if erritr != nil {
+	// 	fmt.Printf("error stack: %s", erritr)
+	// }
 }
 
 // BLClean - cleaning the Firestore blacklist
@@ -121,7 +133,7 @@ func (pder *SessionProvider) BLClean() {
 			break
 		}
 		if err != nil {
-			fmt.Printf("ip address %v, raised an error: %v\n", d.Ref.ID, err)
+			fmt.Printf("ip address %s, raised an error: %s\n", d.Ref.ID, err)
 			continue
 		}
 
@@ -396,8 +408,10 @@ func init() {
 		pder.blacklist = blkl
 	}
 
-	ivmsesman.RegisterProvider(ivmsesman.Firestore, pder)
-	// initiates the required collections in the firestore
+	// initiates the required collections in the firestore with dummy data
 	pder.NewSession("init session")
 	pder.Blacklisting("0.0.0.0", "/", "init blacklist")
+
+	// Register the provider
+	ivmsesman.RegisterProvider(ivmsesman.Firestore, pder)
 }
