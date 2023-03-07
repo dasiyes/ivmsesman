@@ -87,7 +87,8 @@ func (pder *SessionProvider) SessionGC(maxlifetime int64) {
 			break
 		}
 		if err != nil {
-			erritr = fmt.Errorf("err while iterate expired session id: %v, err: %v", doc.Ref.ID, err)
+			erritr = fmt.Errorf("Error raised while iterate expired sessions: %v", err)
+			break
 		}
 		_, err = doc.Ref.Delete(context.TODO())
 		if err != nil {
@@ -104,6 +105,7 @@ func (pder *SessionProvider) BLClean() {
 	docs_cnt := 0
 	del_docs_cnt := 0
 
+	// TODO: move the value of `cp` in the configuration
 	// set default value for ip caranteen period to 30 days
 	// cp := int64(2590000)
 	cp := int64(259200) // 3 days
@@ -350,7 +352,7 @@ func (pder *SessionProvider) NewSession(sid string) (ivmsesman.SessionStore, err
 	return &newsess, nil
 }
 
-// NewSession creates a new session value in the store with sid as a key
+// Blacklisting adds the @ip to the blacklist with the @path and @data
 func (pder *SessionProvider) Blacklisting(ip, path string, data interface{}) {
 
 	v := make(map[string]interface{})
@@ -378,17 +380,24 @@ func init() {
 	// Initialize the GCP project to be used
 	projectID := os.Getenv("FIRESTORE_PROJECT_ID")
 	scn := os.Getenv("SESSION_COLLECTION_NAME")
+	blkl := os.Getenv("BLACKLIST_COLLECTION_NAME")
 
 	client, err := firestore.NewClient(context.TODO(), projectID)
 	if err != nil || projectID == "" {
 		fmt.Printf("FATAL: firestore client init error %v", err.Error())
 		os.Exit(1)
 	}
-	// defer client.Close()
+
 	pder.client = client
 	if scn != "" {
 		pder.collection = scn
 	}
+	if blkl != "" {
+		pder.blacklist = blkl
+	}
 
 	ivmsesman.RegisterProvider(ivmsesman.Firestore, pder)
+	// initiates the required collections in the firestore
+	pder.NewSession("init session")
+	pder.Blacklisting("0.0.0.0", "/", "init blacklist")
 }
