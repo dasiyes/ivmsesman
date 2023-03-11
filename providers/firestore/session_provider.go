@@ -393,11 +393,15 @@ func init() {
 	projectID := os.Getenv("FIRESTORE_PROJECT_ID")
 	scn := os.Getenv("SESSION_COLLECTION_NAME")
 	blkl := os.Getenv("BLACKLIST_COLLECTION_NAME")
+	fslemh := os.Getenv("FIRESTORE_EMULATOR_HOST")
 
 	client, err := firestore.NewClient(context.TODO(), projectID)
-	if err != nil || projectID == "" {
-		fmt.Printf("FATAL: firestore client init error %v", err.Error())
-		os.Exit(1)
+	if err != nil {
+		fmt.Printf("Error while creating firestore client: %v", err.Error())
+		if projectID == "" && fslemh != "" {
+			fmt.Printf("FATAL: firestore client init error %v", err.Error())
+			os.Exit(1)
+		}
 	}
 
 	pder.client = client

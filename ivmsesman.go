@@ -47,7 +47,7 @@ const (
 	// Memory - defines the session store in the memory
 	Memory ssProvider = 10 * iota
 
-	// Firestore - defines the session store in the GCp Firestore native mode
+	// Firestore - defines the session store in the GCP Firestore native mode
 	Firestore
 
 	// Redis - defines the session store in a Redis instance
@@ -383,9 +383,11 @@ func (sm *Sesman) Destroy(w http.ResponseWriter, r *http.Request) {
 // GC is a global clean for expired sessions. It needs to be started in the calling func
 //
 // Example:
+//
 //	func init() {
 //		go globalSessions.GC()
 //	}
+//
 // The GC makes full use of the timer function in the time package. It automatically calls GC when the session times out, ensuring that all sessions are usable during maxLifeTime.
 // TODO: A similar solution can be used to count online users.
 func (sm *Sesman) GC() {
